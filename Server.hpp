@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/12 17:35:18 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/15 14:31:44 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,11 +33,14 @@ public:
 	int	get_port() const;
 	std::string const &	get_password() const;
 
-	void	init_serv();
-	void	setup_socket();
-	void	accept_client();
-	void	handle_client(int fd);
-	void	ft_error_serv(std::string const & str);
+	void	initServ();
+	void	setupSocket();
+	void	acceptClient();
+	void	handleClient(int fd);
+	void	processCommand(int fd, const std::string & line);
+	void	sendMessage(int fd, const std::string &message);
+	void	closeConnection(int fd);
+	void	ftErrorServ(std::string const & str);
 };
 
 

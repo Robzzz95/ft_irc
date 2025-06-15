@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/13 18:31:39 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/15 16:56:22 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,7 +30,7 @@ std::string const &	Server::get_password() const
 	return (_password);
 }
 
-void	Server::ft_error_serv(std::string const & str)
+void	Server::ftErrorServ(std::string const & str)
 {
 	if (_socket != -1)
 		close(_socket);
@@ -38,9 +38,9 @@ void	Server::ft_error_serv(std::string const & str)
 	exit(1);
 }
 
-void	Server::init_serv()
+void	Server::initServ()
 {
-	setup_socket();
+	setupSocket();
 	while (42)
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
@@ -54,24 +54,24 @@ void	Server::init_serv()
 			if (_poll_fds[i].revents & POLLIN)
 			{
 				if (_poll_fds[i].fd == _socket)
-					accept_client();
+					acceptClient();
 				else
-					handle_client(_poll_fds[i].fd);
+					handleClient(_poll_fds[i].fd);
 			}
 		}
 	}
 }
 
-void	Server::setup_socket()
+void	Server::setupSocket()
 {
 	_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (_socket < 0)
-		ft_error_serv("socket() failed.");
+		ftErrorServ("socket() failed.");
 	int opt = 1;
 	if (setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0)
-		ft_error_serv("setsockopt() failed.");
+		ftErrorServ("setsockopt() failed.");
 	if (fcntl(_socket, F_SETFL, O_NONBLOCK) < 0)
-		ft_error_serv("fcntl() failed.");
+		ftErrorServ("fcntl() failed.");
 
 	struct sockaddr_in	addr;
 	std::memset(&addr, 0, sizeof(addr));
@@ -80,9 +80,9 @@ void	Server::setup_socket()
 	addr.sin_port = htons(_port);
 
 	if (bind(_socket, (struct sockaddr*)&addr, sizeof(addr)) < 0)
-		ft_error_serv("bind() failed.");
+		ftErrorServ("bind() failed.");
 	if (listen(_socket, SOMAXCONN) < 0)
-		ft_error_serv("listen() failed.");
+		ftErrorServ("listen() failed.");
 	
 	struct pollfd	pfd;
 	pfd.fd = _socket;
@@ -91,7 +91,7 @@ void	Server::setup_socket()
 	std::cout << GREEN << "SERVER LISTENING ON PORT " << RESET << _port << std::endl;
 }
 
-void	Server::accept_client()
+void	Server::acceptClient()
 {
 	struct sockaddr_in client_addr;
 	socklen_t addr_len = sizeof(client_addr);
@@ -102,26 +102,34 @@ void	Server::accept_client()
 		std::cerr << "Error accepting client." << std::endl;
 		return ;
 	}
-	fcntl(client_fd, F_SETFL, O_NONBLOCK);
-	
+	if (fcntl(client_fd, F_SETFL, O_NONBLOCK) < 0)
+	{
+		std::cerr << "Error: fcntl() failed" << std::endl;
+		return ;
+	}
 	struct pollfd pfd;
 	pfd.fd = client_fd;
 	pfd.events = POLLIN;
 	_poll_fds.push_back(pfd);
+	std::string ip = inet_ntoa(client_addr.sin_addr);
+	std::string hostname = ip;
+
 	////////////////////////////////// fonction interdite?
-	struct hostent* host = gethostbyaddr(&client_addr.sin_addr, sizeof(client_addr.sin_addr), AF_INET);
-	char*	hostname = host->h_name;
-	if (!hostname)
-		hostname = inet_ntoa(client_addr.sin_addr);
-	//////////////////////////////////
-	_clients[client_fd] = new Client(client_fd, inet_ntoa(client_addr.sin_addr), hostname);
+	// std::string hostname;
+	// struct hostent* host = gethostbyaddr(&client_addr.sin_addr, sizeof(client_addr.sin_addr), AF_INET);
+	// if (host && host->h_name)
+	// 	hostname = host->h_name;
+	// else
+	// 	hostname = ip;
+	// //////////////////////////////////
 
+	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
-
-	std::cout << "	New clients ip: " << inet_ntoa(client_addr.sin_addr) << ", its name is: " << hostname << std::endl;
+	std::cout << "	New clients ip: " << ip << ", its name is: " << hostname << std::endl;
+	sendMessage(client_fd, "Please enter password using: [PASS <password>]\n");
 }
 
-void	Server::handle_client(int fd)
+void	Server::handleClient(int fd)
 {
 	char buffer[BUFFER_SIZE];
 	memset(buffer, 0, BUFFER_SIZE);
@@ -147,7 +155,61 @@ void	Server::handle_client(int fd)
 		return;
 	}
 
-	// Client *client = _clients[fd];
-	// client->append_to_buffer(std::string(buffer, bytes_read));
-	// client->process_buffer(*this);
+	Client *client = _clients[fd];
+	client->appendToBuffer(std::string(buffer, bytes_read));
+	std::vector<std::string> lines = client->extractLines();
+	for (size_t i = 0; i < lines.size(); i++)
+		processCommand(fd, lines[i]);
+}
+
+void	Server::processCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	std::istringstream iss(line);
+	std::string	command;
+	iss >> command;
+	
+	if (command == "PASS" && !client->getAuthentificated())
+	{
+		std::string pass;
+		iss >> pass;
+		if (pass != _password)
+		{
+			sendMessage(fd, "Error: wrong password.\nYou have been disconnected.\r\n");
+			closeConnection(fd);
+			return ;
+		}
+		client->setAuthentificated(true);
+		sendMessage(fd, "Correct password.\r\n");
+	}
+	else if (command == "PASS" && client->getAuthentificated())
+		sendMessage(fd, "Already authentificated.\n");
+	// else if (client->getAuthentificated())
+	// 		std::cout << line << std::endl;
+}
+
+void	Server::sendMessage(int fd, const std::string &message)
+{
+	ssize_t sent = send(fd, message.c_str(), message.length(), 0);
+	if (sent < 0)
+		std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
+}
+
+void	Server::closeConnection(int fd)
+{
+	for (std::vector<pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); it++)
+	{
+		if (it->fd == fd)
+		{
+			_poll_fds.erase(it);
+			break ;
+		}
+	}
+	close(fd);
+	if (_clients.find(fd) != _clients.end())
+	{
+		delete _clients[fd];
+		_clients.erase(fd);
+	}
+	std::cout << "Closed connection on FD: " << fd << std::endl;
 }

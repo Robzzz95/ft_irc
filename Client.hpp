@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/13 18:20:07 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/15 14:01:30 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,6 +52,10 @@ public:
 	void	setRealname(const std::string &str);
 	void	setAuthentificated(bool value);
 	void	setRegistered(bool value);
+
+	void	appendToBuffer(const std::string &str);
+	std::vector<std::string>	extractLines();
+
 
 };
 

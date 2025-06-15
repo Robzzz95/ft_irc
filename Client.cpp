@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/13 18:20:11 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/15 15:14:18 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -99,3 +99,22 @@ void	Client::setRegistered(bool value)
 {
 	_registered = value;
 }
+
+void	Client::appendToBuffer(const std::string &str)
+{
+	_buffer += str;
+}
+
+std::vector<std::string>	Client::extractLines()
+{
+	std::vector<std::string>	lines;
+	size_t	pos;
+	
+	while ((pos = _buffer.find("\r\n")) != std::string::npos)
+	{
+		lines.push_back(_buffer.substr(0, pos));
+		_buffer.erase(0, pos + 2);
+	}
+	return (lines);
+}
+
