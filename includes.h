@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/16 12:02:53 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/16 17:13:10 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,6 +35,7 @@
 #include <netdb.h>
 #include <sstream>
 #include <ctype.h>
+#include <iomanip>
 
 void	arguments_parser(char **av);
 void	arg_error(std::string const & str);

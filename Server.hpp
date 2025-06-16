@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/16 13:17:26 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/16 17:09:15 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -26,6 +26,7 @@ private:
 	int	_socket;
 	std::vector<struct pollfd>	_poll_fds;
 	std::map<int, Client*>	_clients;
+	std::string	_name;
 public:
 	Server(int port, std::string const &password);
 	~Server();
@@ -38,7 +39,7 @@ public:
 	void	acceptClient();
 	void	handleClient(int fd);
 	int	processCommand(int fd, const std::string & line);
-	void	sendMessage(int fd, const std::string &message);
+	void	sendMessage(int fd, int code, const std::string &message);
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
 

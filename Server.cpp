@@ -6,13 +6,13 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/16 15:10:47 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/16 17:26:51 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 
-Server::Server(int port, std::string const &password) : _port(port), _password(password), _socket(-1)
+Server::Server(int port, std::string const &password) : _port(port), _password(password), _socket(-1), _name("ft_irc")
 {
 }
 
@@ -117,7 +117,7 @@ void	Server::acceptClient()
 	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
 	std::cout << "	New clients ip: " << ip << ", its hostname is: " << hostname << std::endl;
-	sendMessage(client_fd, "Please enter password using: PASS <password>\n");
+	sendMessage(client_fd, 0, "Please enter password using: PASS <password>");
 }
 
 void	Server::handleClient(int fd)
@@ -167,17 +167,33 @@ int	Server::processCommand(int fd, const std::string &line)
 		return (userCommand(fd, line), 0);
 
 	if (!client->getAuthentificated())
-		return (sendMessage(fd, "Error: you must authentificate first.\r\n"), 0);
+		return (sendMessage(fd, 451, "Error: you must authentificate first."), 0);
 	if (!client->getRegistered() && client->getAuthentificated())
-		return (sendMessage(fd, "You must register first.\r\n"), 0);
+		return (sendMessage(fd, 451, "You must register first."), 0);
 	else
 		std::cout << line << std::endl;
 	return (0);
 }
 
-void	Server::sendMessage(int fd, const std::string &message)
+void	Server::sendMessage(int fd, int code, const std::string &message)
 {
-	ssize_t sent = send(fd, message.c_str(), message.length(), 0);
+	Client*	client = _clients[fd];
+	std::ostringstream oss;
+	if (code != 0)
+	{
+		oss << ":" << _name << " " \
+			<< std::setfill('0') << std::setw(3) << code << " " \
+			<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :" \
+			<< message << "\r\n";
+	}
+	else
+	{
+		oss << ":" << _name << " " \
+			<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :" \
+			<< message << "\r\n";
+	}
+	std::string str = oss.str();
+	ssize_t sent = send(fd, str.c_str(), str.length(), 0);
 	if (sent < 0)
 	std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
 }
@@ -206,7 +222,7 @@ void	Server::passCommand(int fd, const std::string &line)
 	Client*	client = _clients[fd];
 	if (client->getAuthentificated())
 	{
-		sendMessage(fd, "Already authentificated.\r\n");
+		sendMessage(fd, 462, "Already authentificated.");
 		return ;
 	}
 	
@@ -215,17 +231,17 @@ void	Server::passCommand(int fd, const std::string &line)
 	iss >> command >> pass >> extra;
 	if (!extra.empty())
 	{
-		sendMessage(fd, "Error: PASS command takes only one argument.\r\n");
+		sendMessage(fd, 464, "Error: PASS command takes only one argument.");
 		return ;
 	}
 	if (pass != _password)
 	{
-		sendMessage(fd, "Error: wrong password.\nYou have been disconnected.\r\n");
+		sendMessage(fd, 464, "Error: wrong password.\nYou have been disconnected.");
 		closeConnection(fd);
 		return ;
 	}
 	client->setAuthentificated(true);
-	sendMessage(fd, "Correct password.\nPlease set your nickname using: NICK <nickname>\r\n");
+	sendMessage(fd, 0, "Correct password.\nPlease set your nickname using: NICK <nickname>");
 }
 
 void	Server::nickCommand(int fd, const std::string &line)
@@ -234,7 +250,7 @@ void	Server::nickCommand(int fd, const std::string &line)
 	
 	if (!client->getAuthentificated())
 	{
-		sendMessage(fd, "Error: you must authentificate first.\r\n");
+		sendMessage(fd, 451, "Error: you must authentificate first.");
 		return ;		
 	}
 	std::istringstream iss(line);
@@ -242,20 +258,20 @@ void	Server::nickCommand(int fd, const std::string &line)
 	iss >> command >> nickname >> extra_test;
 	if (!isValidNickname(nickname, extra_test))
 	{
-		sendMessage(fd, "Error: invalid nickname.\r\n");
+		sendMessage(fd, 432, "Error: invalid nickname.");
 		return ;
 	}
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (it->second->getNickname() == nickname)
 		{
-			sendMessage(fd, "Error: nickname already in use.\r\n");
+			sendMessage(fd, 433, "Error 433: nickname already in use.");
 			return ;
 		}
 	}
 	client->setNickname(nickname);
-	sendMessage(fd, ("Nickname set to " + nickname + \
-		".\nPlease set your username and your real name using: USER <username> <realname>\r\n"));
+	sendMessage(fd, 0, ("Nickname set to " + nickname + \
+		".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
 }
 
 bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)
@@ -278,32 +294,40 @@ bool	Server::isValidNickname(const std::string &nickname, const std::string &ext
 void	Server::userCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
+	if (client->getRegistered())
+	{
+		sendMessage(fd, 462, "Error: You are already registered.");
+		return ;
+	}
 	if (!client->getAuthentificated())
 	{
-		sendMessage(fd, "Error: you must authentificate first.\r\n");
+		sendMessage(fd, 451, "Error: you must authentificate first.");
 		return ;
 	}
 	if (client->getNickname().empty())
 	{
-		sendMessage(fd, "Please set your nickname first.\r\n");
+		sendMessage(fd, 431, "Error: Please set your nickname first.");
 		return ;
 	}
 	std::istringstream iss(line);
 	std::string command, username, ignore1, ignore2, realname;
 	iss >> command >> username >> ignore1 >> ignore2;
 	std::getline(iss, realname);
-	if (!realname.empty() && realname[0] == ':')
-		realname = realname.substr(1);
 	if (username.empty() || realname.empty())
 	{
-		sendMessage(fd, "Error: invalid USER command format.\r\n");
+		sendMessage(fd, 0, "Error: invalid USER command format.");
 		return ;
 	}
+	size_t i = 0;
+	while (realname[i] == ':' || realname[i] == ' ')
+		i++;
+	realname.erase(0, i);
 	client->setUsername(username);
 	client->setRealname(realname);
-	if (!client->getNickname().empty())
-	{
-		client->setRegistered(true);
-		sendMessage(fd, "Weclome " + client->getNickname() + "!\r\n");
-	}	
+	client->setRegistered(true);
+	sendMessage(fd, 001, client->getNickname() + " :Welcome to the IRC Network " +
+		client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname());
+	sendMessage(fd, 001, client->getNickname() + " :Your host is ft_irc, running version v1.0");
+	sendMessage(fd, 001, client->getNickname() + " :This server was created Mon Jun 10 2025 at 13:45:00");
+	sendMessage(fd, 001, client->getNickname() + " ft_irc v1.0 ao mtov");
 }
