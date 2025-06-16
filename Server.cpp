@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/15 16:56:22 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/16 15:10:47 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -111,22 +111,13 @@ void	Server::acceptClient()
 	pfd.fd = client_fd;
 	pfd.events = POLLIN;
 	_poll_fds.push_back(pfd);
+
 	std::string ip = inet_ntoa(client_addr.sin_addr);
 	std::string hostname = ip;
-
-	////////////////////////////////// fonction interdite?
-	// std::string hostname;
-	// struct hostent* host = gethostbyaddr(&client_addr.sin_addr, sizeof(client_addr.sin_addr), AF_INET);
-	// if (host && host->h_name)
-	// 	hostname = host->h_name;
-	// else
-	// 	hostname = ip;
-	// //////////////////////////////////
-
 	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
-	std::cout << "	New clients ip: " << ip << ", its name is: " << hostname << std::endl;
-	sendMessage(client_fd, "Please enter password using: [PASS <password>]\n");
+	std::cout << "	New clients ip: " << ip << ", its hostname is: " << hostname << std::endl;
+	sendMessage(client_fd, "Please enter password using: PASS <password>\n");
 }
 
 void	Server::handleClient(int fd)
@@ -154,7 +145,6 @@ void	Server::handleClient(int fd)
 		}
 		return;
 	}
-
 	Client *client = _clients[fd];
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
@@ -162,37 +152,34 @@ void	Server::handleClient(int fd)
 		processCommand(fd, lines[i]);
 }
 
-void	Server::processCommand(int fd, const std::string &line)
+int	Server::processCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
 	std::istringstream iss(line);
 	std::string	command;
 	iss >> command;
-	
-	if (command == "PASS" && !client->getAuthentificated())
-	{
-		std::string pass;
-		iss >> pass;
-		if (pass != _password)
-		{
-			sendMessage(fd, "Error: wrong password.\nYou have been disconnected.\r\n");
-			closeConnection(fd);
-			return ;
-		}
-		client->setAuthentificated(true);
-		sendMessage(fd, "Correct password.\r\n");
-	}
-	else if (command == "PASS" && client->getAuthentificated())
-		sendMessage(fd, "Already authentificated.\n");
-	// else if (client->getAuthentificated())
-	// 		std::cout << line << std::endl;
+
+	if (command == "PASS")
+		return (passCommand(fd, line), 0);
+	else if (command == "NICK")
+		return (nickCommand(fd, line), 0);
+	else if (command == "USER")
+		return (userCommand(fd, line), 0);
+
+	if (!client->getAuthentificated())
+		return (sendMessage(fd, "Error: you must authentificate first.\r\n"), 0);
+	if (!client->getRegistered() && client->getAuthentificated())
+		return (sendMessage(fd, "You must register first.\r\n"), 0);
+	else
+		std::cout << line << std::endl;
+	return (0);
 }
 
 void	Server::sendMessage(int fd, const std::string &message)
 {
 	ssize_t sent = send(fd, message.c_str(), message.length(), 0);
 	if (sent < 0)
-		std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
+	std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
 }
 
 void	Server::closeConnection(int fd)
@@ -212,4 +199,111 @@ void	Server::closeConnection(int fd)
 		_clients.erase(fd);
 	}
 	std::cout << "Closed connection on FD: " << fd << std::endl;
+}
+
+void	Server::passCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	if (client->getAuthentificated())
+	{
+		sendMessage(fd, "Already authentificated.\r\n");
+		return ;
+	}
+	
+	std::istringstream iss(line);
+	std::string command, pass, extra;
+	iss >> command >> pass >> extra;
+	if (!extra.empty())
+	{
+		sendMessage(fd, "Error: PASS command takes only one argument.\r\n");
+		return ;
+	}
+	if (pass != _password)
+	{
+		sendMessage(fd, "Error: wrong password.\nYou have been disconnected.\r\n");
+		closeConnection(fd);
+		return ;
+	}
+	client->setAuthentificated(true);
+	sendMessage(fd, "Correct password.\nPlease set your nickname using: NICK <nickname>\r\n");
+}
+
+void	Server::nickCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	
+	if (!client->getAuthentificated())
+	{
+		sendMessage(fd, "Error: you must authentificate first.\r\n");
+		return ;		
+	}
+	std::istringstream iss(line);
+	std::string command, nickname, extra_test;
+	iss >> command >> nickname >> extra_test;
+	if (!isValidNickname(nickname, extra_test))
+	{
+		sendMessage(fd, "Error: invalid nickname.\r\n");
+		return ;
+	}
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (it->second->getNickname() == nickname)
+		{
+			sendMessage(fd, "Error: nickname already in use.\r\n");
+			return ;
+		}
+	}
+	client->setNickname(nickname);
+	sendMessage(fd, ("Nickname set to " + nickname + \
+		".\nPlease set your username and your real name using: USER <username> <realname>\r\n"));
+}
+
+bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)
+{
+	if (nickname.empty() || nickname.size() > 9 || !extra.empty())
+		return (false);
+
+	char c = nickname[0];
+	if (!isalpha(c) && std::string (" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+		return (false);
+	for (size_t i = 1; i < nickname.size(); i++)
+	{
+		c = nickname[i];
+		if (!isalnum(c) && std::string(" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+			return (false);
+	}
+	return (true);
+}
+
+void	Server::userCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessage(fd, "Error: you must authentificate first.\r\n");
+		return ;
+	}
+	if (client->getNickname().empty())
+	{
+		sendMessage(fd, "Please set your nickname first.\r\n");
+		return ;
+	}
+	std::istringstream iss(line);
+	std::string command, username, ignore1, ignore2, realname;
+	iss >> command >> username >> ignore1 >> ignore2;
+	std::getline(iss, realname);
+	if (!realname.empty() && realname[0] == ':')
+		realname = realname.substr(1);
+	if (username.empty() || realname.empty())
+	{
+		sendMessage(fd, "Error: invalid USER command format.\r\n");
+		return ;
+	}
+	client->setUsername(username);
+	client->setRealname(realname);
+	if (!client->getNickname().empty())
+	{
+		client->setRegistered(true);
+		sendMessage(fd, "Weclome " + client->getNickname() + "!\r\n");
+	}	
 }

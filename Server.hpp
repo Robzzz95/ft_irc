@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/15 14:31:44 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/16 13:17:26 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,10 +37,15 @@ public:
 	void	setupSocket();
 	void	acceptClient();
 	void	handleClient(int fd);
-	void	processCommand(int fd, const std::string & line);
+	int	processCommand(int fd, const std::string & line);
 	void	sendMessage(int fd, const std::string &message);
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
+
+	void	passCommand(int fd, const std::string &line);
+	void	nickCommand(int fd, const std::string &line);
+	bool	isValidNickname(const std::string &nickname, const std::string &extra);
+	void	userCommand(int fd, const std::string &line);
 };
 
 
