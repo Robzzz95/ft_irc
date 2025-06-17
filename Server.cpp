@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 11:37:56 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/17 13:47:16 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -257,6 +257,7 @@ void	Server::passCommand(int fd, const std::string &line)
 	sendMessageFromServ(fd, 0, "Correct password.\nPlease set your nickname using: NICK <nickname>");
 }
 
+//notify everyone in the channel of change of nickname
 void	Server::nickCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
@@ -282,9 +283,23 @@ void	Server::nickCommand(int fd, const std::string &line)
 			return ;
 		}
 	}
-	client->setNickname(nickname);
-	sendMessageFromServ(fd, 0, ("Nickname set to " + nickname + \
-		".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
+	std::string oldnick = client->getNickname();
+	// client->setNickname(nickname);
+	if (oldnick.empty())
+	{
+		sendMessageFromServ(fd, 001, ("Nickname set to " + nickname + \
+			".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
+		client->setNickname(nickname);
+		return ;
+	}
+	else if (!oldnick.empty() && client->getRegistered())
+	{
+		sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
+			+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
+		client->setNickname(nickname);
+	}
+	else
+		sendMessageFromServ(fd, 451, "you must register first.");
 }
 
 bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)

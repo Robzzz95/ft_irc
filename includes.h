@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/16 17:13:10 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:51:16 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,6 +36,7 @@
 #include <sstream>
 #include <ctype.h>
 #include <iomanip>
+#include <set>
 
 void	arguments_parser(char **av);
 void	arg_error(std::string const & str);

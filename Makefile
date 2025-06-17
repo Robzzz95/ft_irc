@@ -6,7 +6,7 @@
 #    By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/11 16:21:43 by roarslan          #+#    #+#              #
-#    Updated: 2025/06/12 17:33:25 by roarslan         ###   ########.fr        #
+#    Updated: 2025/06/17 15:38:38 by roarslan         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -20,7 +20,7 @@ SRC = main.cpp \
 	utils.cpp \
 	Server.cpp \
 	Client.cpp \
-	# Channel.cpp \
+	Channel.cpp \
 
 OBJ = $(SRC:.cpp=.o)
 

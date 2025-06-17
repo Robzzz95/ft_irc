@@ -6,13 +6,14 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/15 14:36:54 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/17 15:38:57 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "includes.h"
 #include "Client.hpp"
 #include "Server.hpp"
+#include "Channel.hpp"
 
 int	main(int ac, char **av)
 {
