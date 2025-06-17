@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/16 17:09:15 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/17 11:32:17 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -39,7 +39,8 @@ public:
 	void	acceptClient();
 	void	handleClient(int fd);
 	int	processCommand(int fd, const std::string & line);
-	void	sendMessage(int fd, int code, const std::string &message);
+	void	sendMessageFromServ(int fd, int code, const std::string &message);
+	void	sendRawMessage(int fd, const std::string &message);
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
 
@@ -47,6 +48,10 @@ public:
 	void	nickCommand(int fd, const std::string &line);
 	bool	isValidNickname(const std::string &nickname, const std::string &extra);
 	void	userCommand(int fd, const std::string &line);
+	void	quitCommand(int fd, const std::string &line);
+	void	privmsgCommand(int fd, const std::string &line);
+	Client*	findClientByNickname(const std::string &nickname);
+	void	pingCommand(int fd, const std::string &line);
 };
 
 
