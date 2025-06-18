@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/15 14:01:30 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/18 14:13:23 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,7 +31,6 @@ private:
 	
 	bool	_authentificated;
 	bool	_registered;
-	// bool	_disconnected; ?	
 	
 public:
 	Client(int fd, const std::string &ip, const std::string &hostname);

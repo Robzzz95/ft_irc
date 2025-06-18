@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 11:32:17 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/18 11:08:32 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -15,6 +15,7 @@
 
 #include "includes.h"
 #include "Client.hpp"
+#include "Channel.hpp"
 
 class Client;
 
@@ -26,6 +27,7 @@ private:
 	int	_socket;
 	std::vector<struct pollfd>	_poll_fds;
 	std::map<int, Client*>	_clients;
+	std::map<std::string, Channel*>	_channels;
 	std::string	_name;
 public:
 	Server(int port, std::string const &password);
@@ -52,6 +54,8 @@ public:
 	void	privmsgCommand(int fd, const std::string &line);
 	Client*	findClientByNickname(const std::string &nickname);
 	void	pingCommand(int fd, const std::string &line);
+	void	joinCommand(int fd, const std::string &line);
+	std::vector<std::string>	splitChannels(const std::string &str);
 };
 
 

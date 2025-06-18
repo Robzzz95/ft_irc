@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 15:51:16 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/18 14:10:03 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -37,8 +37,10 @@
 #include <ctype.h>
 #include <iomanip>
 #include <set>
+#include <csignal>
 
 void	arguments_parser(char **av);
 void	arg_error(std::string const & str);
+extern	bool	g_running;
 
 #endif

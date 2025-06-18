@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 13:39:25 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/18 14:52:43 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -17,12 +17,12 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_fd = fd;
 	_ip = ip;
 	_hostname = hostname;
-	// _nickname = "";
+	_nickname = "";
 	_username = "";
 	_realname = "";
+	_buffer = "";
 	_authentificated = false;
 	_registered = false;
-	// _disconnected = false;
 }
 
 Client::~Client()

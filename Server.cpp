@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 13:47:16 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/18 14:54:35 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,19 @@ Server::Server(int port, std::string const &password) : _port(port), _password(p
 
 Server::~Server()
 {
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		delete it->second;
+	_channels.clear();
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (it->first >= 0)
+			close(it->first);
+		delete it->second;
+	}
+	_clients.clear();
+	if (_socket >= 0)
+		close(_socket);
+	std::cout << YELLOW << "\nSERVER CLEANUP...\n" << GREEN << "\nSERVER CLEANUP COMPLETE" << RESET << std::endl;
 }
 
 int	Server::get_port() const
@@ -41,11 +54,13 @@ void	Server::ftErrorServ(std::string const & str)
 void	Server::initServ()
 {
 	setupSocket();
-	while (42)
+	while (g_running)
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
 		if (ret < 0)
 		{
+			if (errno == EINTR)
+				continue ;
 			std::cerr << "poll() failed." << std::endl;
 			break ;
 		}
@@ -55,7 +70,7 @@ void	Server::initServ()
 			{
 				if (_poll_fds[i].fd == _socket)
 					acceptClient();
-				else
+				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
 					handleClient(_poll_fds[i].fd);
 			}
 		}
@@ -87,6 +102,7 @@ void	Server::setupSocket()
 	struct pollfd	pfd;
 	pfd.fd = _socket;
 	pfd.events = POLLIN;
+	pfd.revents = 0;
 	_poll_fds.push_back(pfd);
 	std::cout << GREEN << "SERVER LISTENING ON PORT " << RESET << _port << std::endl;
 }
@@ -110,6 +126,7 @@ void	Server::acceptClient()
 	struct pollfd pfd;
 	pfd.fd = client_fd;
 	pfd.events = POLLIN;
+	pfd.revents = 0;
 	_poll_fds.push_back(pfd);
 
 	std::string ip = inet_ntoa(client_addr.sin_addr);
@@ -171,11 +188,13 @@ int	Server::processCommand(int fd, const std::string &line)
 		return (quitCommand(fd, line), 0);
 	else if (command == "PING")
 		return (pingCommand(fd, line), 0);
+	else if (command == "JOIN")
+		return (joinCommand(fd, line), 0);
 
 	if (!client->getAuthentificated())
-		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 0);
+		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 1);
 	if (!client->getRegistered() && client->getAuthentificated())
-		return (sendMessageFromServ(fd, 451, "You must register first."), 0);
+		return (sendMessageFromServ(fd, 451, "You must register first."), 1);
 	else
 		std::cout << line << std::endl;
 	return (0);
@@ -431,4 +450,61 @@ void	Server::pingCommand(int fd, const std::string &line)
 		return ;
 	}
 	sendRawMessage(fd, "PONG :" + token + "\r\n");
+}
+
+void	Server::joinCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	if (!client->getRegistered())
+	{
+		sendMessageFromServ(fd, 451, "you must register first.");
+		return ;
+	}
+	
+	std::istringstream	iss(line);
+	std::string cmd, channel_list;
+	iss >> cmd >> channel_list;
+	std::vector<std::string>	channels = splitChannels(channel_list);
+	for (size_t i = 0; i < channels.size(); i++)
+	{
+		std::string &channel_name = channels[i];	
+		if (channel_name.empty() || channel_name[0] != '#')
+		{
+			sendMessageFromServ(fd, 476, "Invalid channel name.");
+			return ;
+		}
+		if (_channels.find(channel_name) == _channels.end())
+		{
+			Channel*	new_channel = new Channel(channel_name);
+			new_channel->addClient(fd, client);
+			_channels[channel_name] = new_channel;
+		}
+		else
+		_channels[channel_name]->addClient(fd, client);
+		std::string message = ":" + client->getNickname() + "!" + client->getUsername() \
+		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
+		_channels[channel_name]->broadcast(message);
+		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+	}
+}
+
+std::vector<std::string>	Server::splitChannels(const std::string &str)
+{
+	std::vector<std::string>	dest;
+	std::string	tmp;
+
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		if (str[i] == ',')
+		{
+			if (!tmp.empty())
+				dest.push_back(tmp);
+			tmp.clear();
+		}
+		else
+			tmp += str[i];
+	}
+	if (!tmp.empty())
+		dest.push_back(tmp);	
+	return (dest);
 }
