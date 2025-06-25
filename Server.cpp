@@ -6,13 +6,13 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/18 16:08:25 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/25 17:25:39 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Server.hpp"
 
-Server::Server(int port, std::string const &password) : _port(port), _password(password), _socket(-1), _name("ft_irc")
+Server::Server(int port, std::string const &password) : _port(port), _password(password), _socket(-1), _name("ft_irc"), _info("My first irc server")
 {
 }
 
@@ -134,7 +134,8 @@ void	Server::acceptClient()
 	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
 	std::cout << "	New clients ip: " << ip << ", its hostname is: " << hostname << std::endl;
-	sendMessageFromServ(client_fd, 0, "Please enter password using: PASS <password>");
+	// sendMessageFromServ(client_fd, 0, "Please enter password using: PASS <password>");
+	sendRawMessage(client_fd, ":ft_irc NOTICE * : Please enter your password using <PASS>\r\n");
 }
 
 void	Server::handleClient(int fd)
@@ -162,6 +163,9 @@ void	Server::handleClient(int fd)
 		}
 		return;
 	}
+
+	std::cout << "FROM CLIENT: " << buffer << std::endl;
+
 	Client *client = _clients[fd];
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
@@ -169,6 +173,8 @@ void	Server::handleClient(int fd)
 		processCommand(fd, lines[i]);
 }
 
+
+//refaire une map avec les pointeurs de fonctions 
 int	Server::processCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
@@ -190,6 +196,14 @@ int	Server::processCommand(int fd, const std::string &line)
 		return (pingCommand(fd, line), 0);
 	else if (command == "JOIN")
 		return (joinCommand(fd, line), 0);
+	else if (command == "CAP")
+		return (capCommand(fd, line), 0);
+	else if (command == "MODE")
+		return (modeCommand(fd, line), 0);
+	else if (command == "PING")
+		return (pingCommand(fd, line), 0);
+	else if (command == "WHOIS")
+		return(whoisCommand(fd, line), 0);
 
 	if (!client->getAuthentificated())
 		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 1);
@@ -220,7 +234,7 @@ void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 	std::string str = oss.str();
 	ssize_t sent = send(fd, str.c_str(), str.length(), 0);
 	if (sent < 0)
-	std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
+		std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
 }
 
 void	Server::sendRawMessage(int fd, const std::string &message)
@@ -281,17 +295,23 @@ void	Server::nickCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
 	
-	if (!client->getAuthentificated())
-	{
-		sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
-		return ;		
-	}
+	// if (!client->getAuthentificated())
+	// {
+	// 	sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
+	// 	return ;		
+	// }
 	std::istringstream iss(line);
 	std::string command, nickname, extra_test;
 	iss >> command >> nickname >> extra_test;
 	if (!isValidNickname(nickname, extra_test))
 	{
 		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
+		client->setAuthentificated(true);
+		return ;
+	}
+	if (!client->getAuthentificated())
+	{
+		client->setNickname(nickname);
 		return ;
 	}
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
@@ -346,16 +366,16 @@ void	Server::userCommand(int fd, const std::string &line)
 		sendMessageFromServ(fd, 462, "Error: You are already registered.");
 		return ;
 	}
-	if (!client->getAuthentificated())
-	{
-		sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
-		return ;
-	}
-	if (client->getNickname().empty())
-	{
-		sendMessageFromServ(fd, 431, "Error: Please set your nickname first.");
-		return ;
-	}
+	// if (!client->getAuthentificated())
+	// {
+	// 	sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
+	// 	return ;
+	// }
+	// if (client->getNickname().empty())
+	// {
+	// 	sendMessageFromServ(fd, 431, "Error: Please set your nickname first.");
+	// 	return ;
+	// }
 	std::istringstream iss(line);
 	std::string command, username, ignore1, ignore2, realname;
 	iss >> command >> username >> ignore1 >> ignore2;
@@ -446,10 +466,10 @@ void	Server::pingCommand(int fd, const std::string &line)
 	iss >> cmd >> token;
 	if (token.empty())
 	{
-		sendMessageFromServ(fd, 409, ":no origin specified.");
+		sendRawMessage(fd, ":PONG " + _name + "\r\n");
 		return ;
 	}
-	sendRawMessage(fd, "PONG :" + token + "\r\n");
+	sendRawMessage(fd, ":PONG " + token + "\r\n");
 }
 
 void	Server::joinCommand(int fd, const std::string &line)
@@ -507,4 +527,59 @@ std::vector<std::string>	Server::splitChannels(const std::string &str)
 	if (!tmp.empty())
 		dest.push_back(tmp);	
 	return (dest);
+}
+
+void	Server::capCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	std::istringstream iss(line);
+	std::string command, param;
+	iss >> command >> param;
+	if ((!client->getAuthentificated() && !client->getRegistered()) && param != "END")
+	{
+		std::string nick = client->getNickname().empty() ? "*" : client->getNickname();
+		sendRawMessage(fd, ":irc.yourserver.net CAP " + nick + " LS :\r\n");
+	}
+	else if (param == "END")
+		return ;
+}
+
+void	Server::modeCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	std::istringstream iss(line);
+	std::string command, name, mode;
+	iss >> command >> name >> mode;
+	// if (!name || !mode)
+	// {
+	// 	//gerer l'erreur
+	// }
+	std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + mode;
+	sendRawMessage(fd, msg);
+}
+
+//ajouter la gestion de channels
+void	Server::whoisCommand(int fd, const std::string &line)
+{
+	Client*	client = _clients[fd];
+	std::istringstream iss(line);
+	std::string command, name;
+	iss >> command >> name;
+
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (name == it->second->getNickname())
+		{
+			std::string msg = client->getNickname() + " " + name + " " + it->second->getUsername() + " " \
+				+ it->second->getHostname() + " * :" + it->second->getRealname();  
+			sendMessageFromServ(fd, 311, msg);
+			msg = client->getNickname() + " " + it->second->getNickname() + " " + _name + " :" + _info;
+			sendMessageFromServ(fd, 312, msg);
+			msg = client->getNickname() + " " + it->second->getNickname() + " :End of WHOIS list";
+			sendMessageFromServ(fd, 318, msg);
+			return ;
+		}
+	}
+	std::string message = client->getNickname() + " " + name + " :No such nick/channel";
+	sendMessageFromServ(fd, 401, message);
 }

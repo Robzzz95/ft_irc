@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/18 14:52:43 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/25 14:19:17 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,6 +23,7 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_buffer = "";
 	_authentificated = false;
 	_registered = false;
+	_prefix = "";
 }
 
 Client::~Client()
@@ -53,6 +54,11 @@ const std::string &	Client::getUsername() const
 const std::string &	Client::getRealname() const
 {
 	return (_realname);
+}
+
+std::string	Client::getPrefix() const
+{
+	return ":" + getNickname() + "@" + getUsername() + "!" + getHostname();
 }
 
 const std::string &	Client::getBuffer() const

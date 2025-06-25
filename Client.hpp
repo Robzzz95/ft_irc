@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/18 14:13:23 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/25 14:19:20 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -32,6 +32,8 @@ private:
 	bool	_authentificated;
 	bool	_registered;
 	
+	std::string _prefix;
+	
 public:
 	Client(int fd, const std::string &ip, const std::string &hostname);
 	~Client();
@@ -42,6 +44,7 @@ public:
 	const std::string &	getUsername() const;
 	const std::string &	getRealname() const;
 	const std::string &	getBuffer() const;
+	std::string	getPrefix() const;
 	std::string & getBufferMutable();
 	bool	getAuthentificated() const;
 	bool	getRegistered() const;

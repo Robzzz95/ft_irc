@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/18 11:08:32 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/25 17:18:19 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,7 @@ private:
 	std::map<int, Client*>	_clients;
 	std::map<std::string, Channel*>	_channels;
 	std::string	_name;
+	std::string _info;
 public:
 	Server(int port, std::string const &password);
 	~Server();
@@ -56,6 +57,9 @@ public:
 	void	pingCommand(int fd, const std::string &line);
 	void	joinCommand(int fd, const std::string &line);
 	std::vector<std::string>	splitChannels(const std::string &str);
+	void	capCommand(int fd, const std::string &line);
+	void	modeCommand(int fd, const std::string &line);
+	void	whoisCommand(int fd, const std::string &line);
 };
 
 
