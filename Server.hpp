@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/25 17:18:19 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/28 14:21:15 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,8 @@
 
 class Client;
 
+typedef	void	(Server::*commandHandler)(int, const std::string &);
+
 class Server
 {
 private:
@@ -30,6 +32,7 @@ private:
 	std::map<std::string, Channel*>	_channels;
 	std::string	_name;
 	std::string _info;
+	std::map<std::string, commandHandler>	_commands;
 public:
 	Server(int port, std::string const &password);
 	~Server();
@@ -39,6 +42,7 @@ public:
 
 	void	initServ();
 	void	setupSocket();
+	void	initCommands();
 	void	acceptClient();
 	void	handleClient(int fd);
 	int	processCommand(int fd, const std::string & line);

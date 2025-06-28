@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/25 17:25:39 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/06/28 14:27:35 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,9 +51,31 @@ void	Server::ftErrorServ(std::string const & str)
 	exit(1);
 }
 
+void	Server::initCommands()
+{
+	_commands["PASS"] = &Server::passCommand;
+	_commands["NICK"] = &Server::nickCommand;
+	_commands["USER"] = &Server::userCommand;
+	_commands["PRIVMSG"] = &Server::privmsgCommand;
+	_commands["QUIT"] = &Server::quitCommand;
+	_commands["EXIT"] = &Server::quitCommand;
+	_commands["PING"] = &Server::pingCommand;
+	_commands["JOIN"] = &Server::joinCommand;
+	_commands["CAP"] = &Server::capCommand;
+	_commands["MODE"] = &Server::modeCommand;
+	// _commands["WHOIS"] = &Server::whoisCommand;
+	// _commands[] = &Server:: ;
+	// _commands[] = &Server:: ;
+	// _commands[] = &Server:: ;
+	// _commands[] = &Server:: ;
+	// _commands[] = &Server:: ;
+
+}
+
 void	Server::initServ()
 {
 	setupSocket();
+	initCommands();
 	while (g_running)
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
@@ -182,28 +204,36 @@ int	Server::processCommand(int fd, const std::string &line)
 	std::string	command;
 	iss >> command;
 
-	if (command == "PASS")
-		return (passCommand(fd, line), 0);
-	else if (command == "NICK")
-		return (nickCommand(fd, line), 0);
-	else if (command == "USER")
-		return (userCommand(fd, line), 0);
-	else if (command == "PRIVMSG")
-		return (privmsgCommand(fd, line), 0);
-	else if (command == "QUIT" || command == "EXIT")
-		return (quitCommand(fd, line), 0);
-	else if (command == "PING")
-		return (pingCommand(fd, line), 0);
-	else if (command == "JOIN")
-		return (joinCommand(fd, line), 0);
-	else if (command == "CAP")
-		return (capCommand(fd, line), 0);
-	else if (command == "MODE")
-		return (modeCommand(fd, line), 0);
-	else if (command == "PING")
-		return (pingCommand(fd, line), 0);
-	else if (command == "WHOIS")
-		return(whoisCommand(fd, line), 0);
+	std::map<std::string, commandHandler>::iterator it = _commands.find(command);
+	if (it != _commands.end())
+	{
+		commandHandler	handler = it->second;
+		(this->*handler)(fd, line);
+		return (0);
+	}
+
+	// if (command == "PASS")
+	// 	return (passCommand(fd, line), 0);
+	// else if (command == "NICK")
+	// 	return (nickCommand(fd, line), 0);
+	// else if (command == "USER")
+	// 	return (userCommand(fd, line), 0);
+	// else if (command == "PRIVMSG")
+	// 	return (privmsgCommand(fd, line), 0);
+	// else if (command == "QUIT" || command == "EXIT")
+	// 	return (quitCommand(fd, line), 0);
+	// else if (command == "PING")
+	// 	return (pingCommand(fd, line), 0);
+	// else if (command == "JOIN")
+	// 	return (joinCommand(fd, line), 0);
+	// else if (command == "CAP")
+	// 	return (capCommand(fd, line), 0);
+	// else if (command == "MODE")
+	// 	return (modeCommand(fd, line), 0);
+	// else if (command == "PING")
+	// 	return (pingCommand(fd, line), 0);
+	// else if (command == "WHOIS")
+	// 	return(whoisCommand(fd, line), 0);
 
 	if (!client->getAuthentificated())
 		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 1);
@@ -287,7 +317,7 @@ void	Server::passCommand(int fd, const std::string &line)
 		return ;
 	}
 	client->setAuthentificated(true);
-	sendMessageFromServ(fd, 0, "Correct password.\nPlease set your nickname using: NICK <nickname>");
+	// sendMessageFromServ(fd, 0, "Correct password.\nPlease set your nickname using: NICK <nickname>");
 }
 
 //notify everyone in the channel of change of nickname
@@ -322,23 +352,20 @@ void	Server::nickCommand(int fd, const std::string &line)
 			return ;
 		}
 	}
-	std::string oldnick = client->getNickname();
+	// std::string oldnick = client->getNickname();
 	// client->setNickname(nickname);
-	if (oldnick.empty())
-	{
-		sendMessageFromServ(fd, 001, ("Nickname set to " + nickname + \
-			".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
-		client->setNickname(nickname);
-		return ;
-	}
-	else if (!oldnick.empty() && client->getRegistered())
-	{
-		sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-			+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
-		client->setNickname(nickname);
-	}
-	else
-		sendMessageFromServ(fd, 451, "you must register first.");
+	// if (oldnick.empty())
+	// {
+	// 	sendMessageFromServ(fd, 001, ("Nickname set to " + nickname + \
+	// 		".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
+	// 	client->setNickname(nickname);
+	// 	return ;
+	// }
+
+	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
+		+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
+	client->setNickname(nickname);
+	// sendMessageFromServ(fd, 451, "you must register first.");
 }
 
 bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)
