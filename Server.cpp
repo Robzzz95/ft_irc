@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/28 14:27:35 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/09 10:02:00 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,8 +156,7 @@ void	Server::acceptClient()
 	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
 	std::cout << "	New clients ip: " << ip << ", its hostname is: " << hostname << std::endl;
-	// sendMessageFromServ(client_fd, 0, "Please enter password using: PASS <password>");
-	sendRawMessage(client_fd, ":ft_irc NOTICE * : Please enter your password using <PASS>\r\n");
+	sendRawMessage(client_fd, ":ft_irc NOTICE * : Please enter your password using <PASS>\r\n"); //for netcat
 }
 
 void	Server::handleClient(int fd)
@@ -195,8 +194,6 @@ void	Server::handleClient(int fd)
 		processCommand(fd, lines[i]);
 }
 
-
-//refaire une map avec les pointeurs de fonctions 
 int	Server::processCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
@@ -211,29 +208,6 @@ int	Server::processCommand(int fd, const std::string &line)
 		(this->*handler)(fd, line);
 		return (0);
 	}
-
-	// if (command == "PASS")
-	// 	return (passCommand(fd, line), 0);
-	// else if (command == "NICK")
-	// 	return (nickCommand(fd, line), 0);
-	// else if (command == "USER")
-	// 	return (userCommand(fd, line), 0);
-	// else if (command == "PRIVMSG")
-	// 	return (privmsgCommand(fd, line), 0);
-	// else if (command == "QUIT" || command == "EXIT")
-	// 	return (quitCommand(fd, line), 0);
-	// else if (command == "PING")
-	// 	return (pingCommand(fd, line), 0);
-	// else if (command == "JOIN")
-	// 	return (joinCommand(fd, line), 0);
-	// else if (command == "CAP")
-	// 	return (capCommand(fd, line), 0);
-	// else if (command == "MODE")
-	// 	return (modeCommand(fd, line), 0);
-	// else if (command == "PING")
-	// 	return (pingCommand(fd, line), 0);
-	// else if (command == "WHOIS")
-	// 	return(whoisCommand(fd, line), 0);
 
 	if (!client->getAuthentificated())
 		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 1);
@@ -317,19 +291,13 @@ void	Server::passCommand(int fd, const std::string &line)
 		return ;
 	}
 	client->setAuthentificated(true);
-	// sendMessageFromServ(fd, 0, "Correct password.\nPlease set your nickname using: NICK <nickname>");
 }
 
 //notify everyone in the channel of change of nickname
 void	Server::nickCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
-	
-	// if (!client->getAuthentificated())
-	// {
-	// 	sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
-	// 	return ;		
-	// }
+
 	std::istringstream iss(line);
 	std::string command, nickname, extra_test;
 	iss >> command >> nickname >> extra_test;
@@ -352,20 +320,10 @@ void	Server::nickCommand(int fd, const std::string &line)
 			return ;
 		}
 	}
-	// std::string oldnick = client->getNickname();
-	// client->setNickname(nickname);
-	// if (oldnick.empty())
-	// {
-	// 	sendMessageFromServ(fd, 001, ("Nickname set to " + nickname + \
-	// 		".\nPlease set your username and your real name using: USER <username> <0> <*> <realname>"));
-	// 	client->setNickname(nickname);
-	// 	return ;
-	// }
 
 	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
 		+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
 	client->setNickname(nickname);
-	// sendMessageFromServ(fd, 451, "you must register first.");
 }
 
 bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)
@@ -393,16 +351,7 @@ void	Server::userCommand(int fd, const std::string &line)
 		sendMessageFromServ(fd, 462, "Error: You are already registered.");
 		return ;
 	}
-	// if (!client->getAuthentificated())
-	// {
-	// 	sendMessageFromServ(fd, 451, "Error: you must authentificate first.");
-	// 	return ;
-	// }
-	// if (client->getNickname().empty())
-	// {
-	// 	sendMessageFromServ(fd, 431, "Error: Please set your nickname first.");
-	// 	return ;
-	// }
+
 	std::istringstream iss(line);
 	std::string command, username, ignore1, ignore2, realname;
 	iss >> command >> username >> ignore1 >> ignore2;
