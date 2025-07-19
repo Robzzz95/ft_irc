@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 17:25:43 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/19 12:04:43 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -43,6 +43,11 @@ public:
 	bool	isOperator(int fd) const;
 	void	makeOperator(int fd);
 	void	removeOperator(int fd);
+
+	bool	isInviteOnly() const;
+	bool	hasPassword() const;
+	bool	isTopicLocked()	const;
+	void	setMode(char mode);
 
 	void	broadcast(const std::string &message);
 

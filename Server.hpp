@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/28 14:21:15 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/19 12:34:49 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -50,6 +50,7 @@ public:
 	void	sendRawMessage(int fd, const std::string &message);
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
+	void	removeClientFromAllChannels(int fd);
 
 	void	passCommand(int fd, const std::string &line);
 	void	nickCommand(int fd, const std::string &line);

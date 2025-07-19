@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/09 10:02:00 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/19 14:04:12 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -18,6 +18,7 @@ Server::Server(int port, std::string const &password) : _port(port), _password(p
 
 Server::~Server()
 {
+	std::cout << YELLOW << "\nSERVER CLEANUP...\n" << RESET;
 	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
 		delete it->second;
 	_channels.clear();
@@ -30,7 +31,7 @@ Server::~Server()
 	_clients.clear();
 	if (_socket >= 0)
 		close(_socket);
-	std::cout << YELLOW << "\nSERVER CLEANUP...\n" << GREEN << "\nSERVER CLEANUP COMPLETE" << RESET << std::endl;
+	std::cout << GREEN << "\nSERVER CLEANUP COMPLETE" << RESET << std::endl;
 }
 
 int	Server::get_port() const
@@ -63,7 +64,7 @@ void	Server::initCommands()
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
-	// _commands["WHOIS"] = &Server::whoisCommand;
+	_commands["WHOIS"] = &Server::whoisCommand;
 	// _commands[] = &Server:: ;
 	// _commands[] = &Server:: ;
 	// _commands[] = &Server:: ;
@@ -191,12 +192,15 @@ void	Server::handleClient(int fd)
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
 	for (size_t i = 0; i < lines.size(); i++)
+	{
+		if (!client)
+			break ;
 		processCommand(fd, lines[i]);
+	}
 }
 
 int	Server::processCommand(int fd, const std::string &line)
 {
-	Client*	client = _clients[fd];
 	std::istringstream iss(line);
 	std::string	command;
 	iss >> command;
@@ -208,13 +212,6 @@ int	Server::processCommand(int fd, const std::string &line)
 		(this->*handler)(fd, line);
 		return (0);
 	}
-
-	if (!client->getAuthentificated())
-		return (sendMessageFromServ(fd, 451, "Error: you must authentificate first."), 1);
-	if (!client->getRegistered() && client->getAuthentificated())
-		return (sendMessageFromServ(fd, 451, "You must register first."), 1);
-	else
-		std::cout << line << std::endl;
 	return (0);
 }
 
@@ -248,6 +245,24 @@ void	Server::sendRawMessage(int fd, const std::string &message)
 		std::cerr << "Error: failed to send raw message." << std::endl;
 }
 
+void	Server::removeClientFromAllChannels(int fd)
+{
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
+	{
+		Channel* channel = it->second;
+		if (channel->hasClient(fd))
+		{
+			channel->removeClient(fd);
+			
+			//!!broadcast about leaving to other clients in channel!!!
+			
+			//std::string partingMsg = : + _clients[fd]->getPrefix + " PART " + channel->getName() + \r\n;
+			//channel->broadcast(partingMsg);
+		}
+	}
+	
+}
+
 void	Server::closeConnection(int fd)
 {
 	for (std::vector<pollfd>::iterator it = _poll_fds.begin(); it != _poll_fds.end(); it++)
@@ -261,6 +276,7 @@ void	Server::closeConnection(int fd)
 	close(fd);
 	if (_clients.find(fd) != _clients.end())
 	{
+		removeClientFromAllChannels(fd);
 		delete _clients[fd];
 		_clients.erase(fd);
 	}
@@ -275,7 +291,6 @@ void	Server::passCommand(int fd, const std::string &line)
 		sendMessageFromServ(fd, 462, "Already authentificated.");
 		return ;
 	}
-	
 	std::istringstream iss(line);
 	std::string command, pass, extra;
 	iss >> command >> pass >> extra;
@@ -298,29 +313,30 @@ void	Server::nickCommand(int fd, const std::string &line)
 {
 	Client*	client = _clients[fd];
 
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	std::istringstream iss(line);
 	std::string command, nickname, extra_test;
 	iss >> command >> nickname >> extra_test;
 	if (!isValidNickname(nickname, extra_test))
 	{
 		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-		client->setAuthentificated(true);
 		return ;
 	}
-	if (!client->getAuthentificated())
-	{
-		client->setNickname(nickname);
-		return ;
-	}
+
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (it->second->getNickname() == nickname)
 		{
+			// sendRawMessage(fd, ":ft_irc 433 * " + nickname + " :Nickname is already in use\r\n");
 			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
 			return ;
 		}
 	}
-
 	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
 		+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
 	client->setNickname(nickname);
