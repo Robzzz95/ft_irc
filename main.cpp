@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/18 14:10:15 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/20 18:08:53 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -38,8 +38,23 @@ int	main(int ac, char **av)
 	
 	arguments_parser(av);
 	Server	serv(atoi(av[1]), av[2]);
-	// std::cout << "Port: " << serv.get_port() << "\nPassword: " << serv.get_password() << std::endl;
 	std::cout << YELLOW "STARTING SERVER..." RESET << std::endl;
 	serv.initServ();
 	return (0);
 }
+
+
+/*
+to do list:
+change parameters input into vector<std::string> = split(input);
+get the nick command to refuse duplicates
+get pingpong command to count time and respond better
+?class Message?
+operators handling with all the MODE commands
+channels dont broadcast properly
+get the modes for channels
+get ctrl+Z to work properly
+some inputs outputs should get done properly, might have issues so far 
+get the join command to parse better, need some improvement (/join ######) for exemple
+add missing commands
+*/
