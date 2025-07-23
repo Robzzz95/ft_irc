@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/19 14:04:12 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 13:37:48 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,7 +113,7 @@ void	Server::setupSocket()
 
 	struct sockaddr_in	addr;
 	std::memset(&addr, 0, sizeof(addr));
-	addr.sin_family  =AF_INET;
+	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = INADDR_ANY;
 	addr.sin_port = htons(_port);
 
