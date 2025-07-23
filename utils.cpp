@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 13:51:37 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 14:56:55 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,4 +31,24 @@ void	arguments_parser(char **av)
 	long long num = atol(av[1]);
 	if (num < 1024 || num > 65535)
 		arg_error("invalid port.");
+}
+
+std::vector<std::string> splitIrc(const std::string & line)
+{
+	std::vector<std::string> dest;
+	std::string word;
+	std::istringstream iss(line);
+
+	while (iss >> word)
+	{
+		if (word[0] == ':')
+		{
+			std::string rest;
+			std::getline(iss, rest);
+			word += rest;
+			dest.push_back(word);
+		}
+		dest.push_back(word);
+	}
+	return (dest);
 }

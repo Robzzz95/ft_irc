@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 13:37:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 14:17:07 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -192,11 +192,7 @@ void	Server::handleClient(int fd)
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
 	for (size_t i = 0; i < lines.size(); i++)
-	{
-		if (!client)
-			break ;
 		processCommand(fd, lines[i]);
-	}
 }
 
 int	Server::processCommand(int fd, const std::string &line)
@@ -437,7 +433,7 @@ void	Server::privmsgCommand(int fd, const std::string &line)
 		sendMessageFromServ(fd, 401, recipient + " : no such nick.");
 		return ;
 	}
-	std::string full_message = ":" + sender->getNickname() + " PRIVMSG " + " :" + message + "\r\n";
+	std::string full_message = ":" + sender->getPrefix() + " PRIVMSG " + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
 
