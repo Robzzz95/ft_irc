@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/19 12:34:49 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 15:48:47 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,7 +19,7 @@
 
 class Client;
 
-typedef	void	(Server::*commandHandler)(int, const std::string &);
+typedef	void	(Server::*commandHandler)(int, std::vector<std::string>);
 
 class Server
 {
@@ -45,26 +45,26 @@ public:
 	void	initCommands();
 	void	acceptClient();
 	void	handleClient(int fd);
-	int	processCommand(int fd, const std::string & line);
+	int		processCommand(int fd, const std::string & line);
 	void	sendMessageFromServ(int fd, int code, const std::string &message);
 	void	sendRawMessage(int fd, const std::string &message);
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
 	void	removeClientFromAllChannels(int fd);
 
-	void	passCommand(int fd, const std::string &line);
-	void	nickCommand(int fd, const std::string &line);
-	bool	isValidNickname(const std::string &nickname, const std::string &extra);
-	void	userCommand(int fd, const std::string &line);
-	void	quitCommand(int fd, const std::string &line);
-	void	privmsgCommand(int fd, const std::string &line);
+	void	passCommand(int fd, std::vector<std::string> vec);
+	void	nickCommand(int fd, std::vector<std::string> vec);
+	bool	isValidNickname(const std::string &nickname);
+	void	userCommand(int fd, std::vector<std::string> vec);
+	void	quitCommand(int fd, std::vector<std::string> vec);
+	void	privmsgCommand(int fd, std::vector<std::string> vec);
 	Client*	findClientByNickname(const std::string &nickname);
-	void	pingCommand(int fd, const std::string &line);
-	void	joinCommand(int fd, const std::string &line);
+	void	pingCommand(int fd, std::vector<std::string> vec);
+	void	joinCommand(int fd, std::vector<std::string> vec);
 	std::vector<std::string>	splitChannels(const std::string &str);
-	void	capCommand(int fd, const std::string &line);
-	void	modeCommand(int fd, const std::string &line);
-	void	whoisCommand(int fd, const std::string &line);
+	void	capCommand(int fd, std::vector<std::string> vec);
+	void	modeCommand(int fd, std::vector<std::string> vec);
+	void	whoisCommand(int fd, std::vector<std::string> vec);
 };
 
 

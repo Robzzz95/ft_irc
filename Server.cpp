@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 14:17:07 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 16:24:14 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -192,21 +192,26 @@ void	Server::handleClient(int fd)
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
 	for (size_t i = 0; i < lines.size(); i++)
+	{
+		if (_clients.find(fd) == _clients.end())
+			break ;
 		processCommand(fd, lines[i]);
+	}
 }
 
 int	Server::processCommand(int fd, const std::string &line)
 {
-	std::istringstream iss(line);
-	std::string	command;
-	iss >> command;
-
-	std::map<std::string, commandHandler>::iterator it = _commands.find(command);
+	std::vector<std::string> vec = splitIrc(line);
+	if (vec.empty())
+		return (0);
+	std::map<std::string, commandHandler>::iterator it = _commands.find(vec[0]);
 	if (it != _commands.end())
 	{
 		commandHandler	handler = it->second;
-		(this->*handler)(fd, line);
-		return (0);
+		(this->*handler)(fd, vec);
+		
+		if (_clients.find(fd) == _clients.end())
+			return (1);
 	}
 	return (0);
 }
@@ -279,23 +284,22 @@ void	Server::closeConnection(int fd)
 	std::cout << "Closed connection on FD: " << fd << std::endl;
 }
 
-void	Server::passCommand(int fd, const std::string &line)
+void	Server::passCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (!client)
+		return ;
 	if (client->getAuthentificated())
 	{
 		sendMessageFromServ(fd, 462, "Already authentificated.");
 		return ;
 	}
-	std::istringstream iss(line);
-	std::string command, pass, extra;
-	iss >> command >> pass >> extra;
-	if (!extra.empty())
+	if (vec.size() < 2)
 	{
 		sendMessageFromServ(fd, 464, "Error: PASS command takes only one argument.");
 		return ;
 	}
-	if (pass != _password)
+	if (vec[1] != _password)
 	{
 		sendMessageFromServ(fd, 464, "Error: wrong password.\nYou have been disconnected.");
 		closeConnection(fd);
@@ -305,7 +309,7 @@ void	Server::passCommand(int fd, const std::string &line)
 }
 
 //notify everyone in the channel of change of nickname
-void	Server::nickCommand(int fd, const std::string &line)
+void	Server::nickCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 
@@ -315,32 +319,32 @@ void	Server::nickCommand(int fd, const std::string &line)
 		closeConnection(fd);
 		return ;
 	}
-	std::istringstream iss(line);
-	std::string command, nickname, extra_test;
-	iss >> command >> nickname >> extra_test;
-	if (!isValidNickname(nickname, extra_test))
+	if (vec.size() != 2)
+	{
+		//erreur wrong parameters!
+		return ;
+	}
+	if (!isValidNickname(vec[1]))
 	{
 		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
 		return ;
 	}
-
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-		if (it->second->getNickname() == nickname)
+		if (it->second->getNickname() == vec[1])
 		{
-			// sendRawMessage(fd, ":ft_irc 433 * " + nickname + " :Nickname is already in use\r\n");
 			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
 			return ;
 		}
 	}
 	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getRealname() + " NICK " + nickname + "\r\n"));
-	client->setNickname(nickname);
+		+ "@" + client->getRealname() + " NICK " + vec[1] + "\r\n"));
+	client->setNickname(vec[1]);
 }
 
-bool	Server::isValidNickname(const std::string &nickname, const std::string &extra)
+bool	Server::isValidNickname(const std::string &nickname)
 {
-	if (nickname.empty() || nickname.size() > 9 || !extra.empty())
+	if (nickname.empty() || nickname.size() > 9)
 		return (false);
 
 	char c = nickname[0];
@@ -355,8 +359,10 @@ bool	Server::isValidNickname(const std::string &nickname, const std::string &ext
 	return (true);
 }
 
-void	Server::userCommand(int fd, const std::string &line)
+void	Server::userCommand(int fd, std::vector<std::string> vec)
 {
+	if (_clients.find(fd) == _clients.end())
+		return ;
 	Client*	client = _clients[fd];
 	if (client->getRegistered())
 	{
@@ -364,13 +370,16 @@ void	Server::userCommand(int fd, const std::string &line)
 		return ;
 	}
 
-	std::istringstream iss(line);
-	std::string command, username, ignore1, ignore2, realname;
-	iss >> command >> username >> ignore1 >> ignore2;
-	std::getline(iss, realname);
+	if (vec.size() < 5)
+	{
+		sendMessageFromServ(fd, 0, "Error: invalid USER command format.");//a corriger
+		return ;
+	}
+	std::string username = vec[1];
+	std::string realname = vec[4]; 
 	if (username.empty() || realname.empty())
 	{
-		sendMessageFromServ(fd, 0, "Error: invalid USER command format.");
+		sendMessageFromServ(fd, 0, "Error: invalid USER command format.");//a corriger
 		return ;
 	}
 	size_t i = 0;
@@ -387,14 +396,11 @@ void	Server::userCommand(int fd, const std::string &line)
 	sendMessageFromServ(fd, 004, client->getNickname() + " ft_irc v1.0 ao mtov");
 }
 
-void	Server::quitCommand(int fd, const std::string &line)
+void	Server::quitCommand(int fd, std::vector<std::string> vec)
 {
-	// Client*	client = _clients[fd];
-	std::istringstream iss(line);
-	std::string command, reason, message;
-	iss >> command;
-	std::getline(iss, reason);
-	if (!reason.empty())
+	std::string reason = vec[1];
+	std::string message; /// a envoyer a tout le monde pour avertir du depart!
+	if (vec.size() > 2)
 	{
 		size_t i = 0;
 		while (i < reason.size() && (reason[i] == ':' || reason[i] == ' '))
@@ -408,7 +414,7 @@ void	Server::quitCommand(int fd, const std::string &line)
 	closeConnection(fd);
 }
 
-void	Server::privmsgCommand(int fd, const std::string &line)
+void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	sender = _clients[fd];
 	if (!sender->getRegistered())
@@ -416,10 +422,15 @@ void	Server::privmsgCommand(int fd, const std::string &line)
 		sendMessageFromServ(fd, 451, "You have not registered.");
 		return ;
 	}
-	std::istringstream iss(line);
+	if (vec.size() < 2)
+	{
+		//gerer l'erreur pas assez de parametres
+		return ;
+	}
+	
 	std::string command, recipient, message;
-	iss >> command >> recipient;
-	std::getline(iss, message);
+	recipient = vec[1];
+	message = vec[2];
 	if (!message.empty() && message[0] == ':')
 		message.erase(0, 1);
 	if (recipient.empty() || message.empty())
@@ -447,20 +458,17 @@ Client*	Server::findClientByNickname(const std::string &nickname)
 	return (NULL);
 }
 
-void	Server::pingCommand(int fd, const std::string &line)
+void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
-	std::istringstream iss(line);
-	std::string cmd, token;
-	iss >> cmd >> token;
-	if (token.empty())
+	if (vec.size() < 2)
 	{
 		sendRawMessage(fd, ":PONG " + _name + "\r\n");
 		return ;
 	}
-	sendRawMessage(fd, ":PONG " + token + "\r\n");
+	sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
 }
 
-void	Server::joinCommand(int fd, const std::string &line)
+void	Server::joinCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 	if (!client->getRegistered())
@@ -469,10 +477,7 @@ void	Server::joinCommand(int fd, const std::string &line)
 		return ;
 	}
 	
-	std::istringstream	iss(line);
-	std::string cmd, channel_list;
-	iss >> cmd >> channel_list;
-	std::vector<std::string>	channels = splitChannels(channel_list);
+	std::vector<std::string>	channels = splitChannels(vec[1]);
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];	
@@ -503,7 +508,7 @@ std::vector<std::string>	Server::splitChannels(const std::string &str)
 
 	for (size_t i = 0; i < str.length(); i++)
 	{
-		if (str[i] == ',')
+		if (str[i] == ',' || str[i] == '#')
 		{
 			if (!tmp.empty())
 				dest.push_back(tmp);
@@ -517,12 +522,15 @@ std::vector<std::string>	Server::splitChannels(const std::string &str)
 	return (dest);
 }
 
-void	Server::capCommand(int fd, const std::string &line)
+void	Server::capCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
-	std::istringstream iss(line);
-	std::string command, param;
-	iss >> command >> param;
+	if (vec.size() < 2)
+	{
+		//erreur pas assez d'arguments
+		return ;
+	}
+	std::string param = vec[1];
 	if ((!client->getAuthentificated() && !client->getRegistered()) && param != "END")
 	{
 		std::string nick = client->getNickname().empty() ? "*" : client->getNickname();
@@ -532,12 +540,16 @@ void	Server::capCommand(int fd, const std::string &line)
 		return ;
 }
 
-void	Server::modeCommand(int fd, const std::string &line)
+void	Server::modeCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
-	std::istringstream iss(line);
-	std::string command, name, mode;
-	iss >> command >> name >> mode;
+	if (vec.size() < 3)
+	{
+		//gerer l'erreur pas assez de parametres
+		return ;
+	}
+	std::string name = vec[1];
+	std::string mode = vec[2];
 	// if (!name || !mode)
 	// {
 	// 	//gerer l'erreur
@@ -547,12 +559,10 @@ void	Server::modeCommand(int fd, const std::string &line)
 }
 
 //ajouter la gestion de channels
-void	Server::whoisCommand(int fd, const std::string &line)
+void	Server::whoisCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
-	std::istringstream iss(line);
-	std::string command, name;
-	iss >> command >> name;
+	std::string name = vec[1];
 
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
