@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 14:56:55 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 15:29:48 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@ std::vector<std::string> splitIrc(const std::string & line)
 			std::getline(iss, rest);
 			word += rest;
 			dest.push_back(word);
+			break ;
 		}
 		dest.push_back(word);
 	}

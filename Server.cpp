@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:07:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 15:14:23 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -442,7 +442,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 			return sendMessageFromServ(fd, 403, recipient + " :No such channel");
 		if (!channel->hasClient(fd))
 			return sendMessageFromServ(fd, 404, recipient + " :Cannot send to channel");
-		channel->broadcast(":" + sender->getNickname() + " PRIVMSG " + recipient + " :" + message + "\r\n");
+		channel->broadcast(":" + sender->getNickname() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
 		return ;
 	}
 	//private message 
@@ -508,7 +508,7 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 			_channels[channel_name]->addClient(fd, client);
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() \
 		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
-		_channels[channel_name]->broadcast(message);
+		_channels[channel_name]->broadcast(message, 0);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
 	}
 }

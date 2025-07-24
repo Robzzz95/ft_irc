@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/17 17:27:00 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 15:17:51 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -78,8 +78,13 @@ void	Channel::removeOperator(int fd)
 	_operators.erase(fd);
 }
 
-void	Channel::broadcast(const std::string &message)
+void	Channel::broadcast(const std::string &message, int except_fd)
 {
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (it->first == except_fd)
+			continue ;
 		send(it->first, message.c_str(), message.size(), 0);
+		
+	}
 }
