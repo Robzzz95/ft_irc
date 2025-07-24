@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 13:24:53 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 18:06:34 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -218,7 +218,7 @@ int	Server::processCommand(int fd, const std::string &line)
 
 void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 {
-	Client*	client = _clients[fd];
+	Client* client = _clients[fd];
 	std::ostringstream oss;
 	if (code != 0)
 	{
@@ -229,8 +229,8 @@ void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 	}
 	else
 	{
-		oss << ":" << _name << " " \
-			<< (client->getNickname().empty() ? "*" : client->getNickname()) << ": " \
+		oss << ":" << _name << " "
+			<< (client->getNickname().empty() ? "*" : client->getNickname()) << " "
 			<< message << "\r\n";
 	}
 	std::string str = oss.str();
@@ -311,35 +311,53 @@ void	Server::passCommand(int fd, std::vector<std::string> vec)
 //notify everyone in the channel of change of nickname
 void	Server::nickCommand(int fd, std::vector<std::string> vec)
 {
-	Client*	client = _clients[fd];
+	Client* client = _clients[fd];
 
 	if (!client->getAuthentificated())
 	{
 		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
 		closeConnection(fd);
-		return ;
+		return;
 	}
-	if (vec.size() != 2)
-	{
-		//erreur wrong parameters!
-		return ;
-	}
-	if (!isValidNickname(vec[1]))
+	if (vec.size() != 2 || vec[1].find(' ') != std::string::npos || vec[1].empty()) {
+    sendMessageFromServ(fd, 431, "No nickname given");
+    return;
+}
+	std::string new_nick = vec[1];
+	if (!isValidNickname(new_nick))
 	{
 		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-		return ;
+		return;
 	}
-	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
-	{
-		if (it->second->getNickname() == vec[1])
-		{
-			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
-			return ;
-		}
-	}
+	// Si le nick est déjà celui du client, ne rien faire
+	if (client->getNickname() == new_nick)
+		return;
+
+	// Cherche un nick libre, ajoute des _ si besoin
+	std::string candidate = new_nick;
+	while (true) {
+    bool taken = false;
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++) {
+        if (it->second->getNickname() == candidate && it->first != fd) {
+            taken = true;
+            break;
+        }
+    }
+    if (!taken)
+        break;
+    if (candidate.length() < 9)
+        candidate += "_";
+    else {
+        sendMessageFromServ(fd, 433, "Nickname is already in use and cannot be modified further.");
+        return;
+    }
+}
+
+	// Envoie le message de changement de nick
 	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getRealname() + " NICK " + vec[1] + "\r\n"));
-	client->setNickname(vec[1]);
+		+ "@" + client->getRealname() + " NICK " + candidate + "\r\n"));
+	client->setNickname(candidate);
+	sendMessageFromServ(fd, 0, "You're now known as " + candidate);
 }
 
 bool	Server::isValidNickname(const std::string &nickname)
@@ -449,7 +467,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 		return ;
 	}
 	//private message 
-	Client*	target = findClientByNickname(recipient);
+	Client*target = findClientByNickname(recipient);
 	if (!target)
 		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
 	std::string full_message = ":" + sender->getNickname() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
