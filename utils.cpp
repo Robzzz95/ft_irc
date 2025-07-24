@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/12 14:25:54 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/23 14:47:32 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -29,6 +29,6 @@ void	arguments_parser(char **av)
 			arg_error("invalid port.");
 	}
 	long long num = atol(av[1]);
-	if (num < 0 || num > 65535 || num == 80 || num == 21 || num == 22 )
+	if (num < 1024 || num > 65535)
 		arg_error("invalid port.");
 }
