@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 11:18:12 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 13:24:53 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -418,10 +418,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	sender = _clients[fd];
 	if (!sender->getRegistered())
-	{
-		sendMessageFromServ(fd, 451, "You have not registered.");
-		return ;
-	}
+		return sendMessageFromServ(fd, 451, "You have not registered.");
 	if (vec.size() < 2)
 	{
 		//gerer l'erreur pas assez de parametres
@@ -431,21 +428,31 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	std::string command, recipient, message;
 	recipient = vec[1];
 	for (size_t i = 2; i < vec.size(); i++)
-		message += vec[i] + ' ';
+	{
+		message += vec[i];
+		if (i + 1 < vec.size())
+			message += ' ';	
+	}
 	if (!message.empty() && message[0] == ':')
 		message.erase(0, 1);
 	if (recipient.empty() || message.empty())
+		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
+	//message to channel
+	if (recipient[0] == '#')
 	{
-		sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
+		Channel* channel = getChannelByName(recipient);
+		if (!channel)
+			return sendMessageFromServ(fd, 403, recipient + " :No such channel");
+		if (!channel->hasClient(fd))
+			return sendMessageFromServ(fd, 404, recipient + " :Cannot send to channel");
+		channel->broadcast(":" + sender->getNickname() + " PRIVMSG " + recipient + " :" + message + "\r\n");
 		return ;
 	}
+	//private message 
 	Client*	target = findClientByNickname(recipient);
 	if (!target)
-	{
-		sendMessageFromServ(fd, 401, recipient + " : no such nick.");
-		return ;
-	}
-	std::string full_message = ":" + sender->getPrefix() + " PRIVMSG " + " :" + message + "\r\n";
+		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
+	std::string full_message = ":" + sender->getNickname() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
 
@@ -458,6 +465,17 @@ Client*	Server::findClientByNickname(const std::string &nickname)
 	}
 	return (NULL);
 }
+
+Channel*	Server::getChannelByName(const std::string &str)
+{
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
+	{
+		if (it->first == str)
+			return (it->second);
+	}
+	return (NULL);
+}
+
 
 void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
@@ -477,7 +495,11 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 		sendMessageFromServ(fd, 451, "you must register first.");
 		return ;
 	}
-	
+	if (vec.size() < 2)
+	{
+		//erreur pas assez de parametres
+		return ;
+	}
 	std::vector<std::string>	channels = splitChannels(vec[1]);
 	for (size_t i = 0; i < channels.size(); i++)
 	{

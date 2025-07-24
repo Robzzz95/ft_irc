@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 13:52:29 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 13:23:12 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,6 @@ int	main(int ac, char **av)
 
 /*
 to do list:
-change parameters input into vector<std::string> = split(input);
 get the nick command to refuse duplicates
 get pingpong command to count time and respond better
 ?class Message?
