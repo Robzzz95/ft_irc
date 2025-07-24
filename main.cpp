@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/22 23:08:45 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/24 14:14:29 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,10 +45,10 @@ int	main(int ac, char **av)
 
 /*
 to do list:
-change parameters input into vector<std::string> = split(input);
 get the nick command to refuse duplicates
 get pingpong command to count time and respond better
 ?class Message?
+msg command to work on channels
 operators handling with all the MODE commands
 channels dont broadcast properly
 get the modes for channels
