@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/23 16:24:14 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 11:18:12 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -430,7 +430,8 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	
 	std::string command, recipient, message;
 	recipient = vec[1];
-	message = vec[2];
+	for (size_t i = 2; i < vec.size(); i++)
+		message += vec[i] + ' ';
 	if (!message.empty() && message[0] == ':')
 		message.erase(0, 1);
 	if (recipient.empty() || message.empty())
