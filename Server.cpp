@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:14:23 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 15:57:21 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -562,6 +562,21 @@ void	Server::modeCommand(int fd, std::vector<std::string> vec)
 	}
 	std::string name = vec[1];
 	std::string mode = vec[2];
+	// Channel* channel = getChannelByName(vec[1]);
+	// if (!channel)
+	// {
+	// 	//erreur
+	// 	return ;
+	// }
+	// if (mode == "-o")
+	// {
+	// 	// channel->setPrivileges(vec[3]);
+	// 	return ;
+	// }
+	// else if (mode == "-i")
+	// {
+		
+	// }
 	// if (!name || !mode)
 	// {
 	// 	//gerer l'erreur
