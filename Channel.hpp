@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:11:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 16:54:52 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,7 @@ public:
 	bool	hasPassword() const;
 	bool	isTopicLocked()	const;
 	void	setMode(char mode);
+	bool	isEmpty() const;
 
 	void	broadcast(const std::string &message, int except_fd);
 

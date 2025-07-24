@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:17:51 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 16:55:36 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,4 +87,9 @@ void	Channel::broadcast(const std::string &message, int except_fd)
 		send(it->first, message.c_str(), message.size(), 0);
 		
 	}
+}
+
+bool	Channel::isEmpty() const
+{
+	return _clients.empty();
 }

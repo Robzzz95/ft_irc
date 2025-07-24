@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:57:21 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 16:54:34 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,7 +65,7 @@ void	Server::initCommands()
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
 	_commands["WHOIS"] = &Server::whoisCommand;
-	// _commands[] = &Server:: ;
+	_commands["PART"] = &Server::partCommand;
 	// _commands[] = &Server:: ;
 	// _commands[] = &Server:: ;
 	// _commands[] = &Server:: ;
@@ -510,6 +510,49 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
 		_channels[channel_name]->broadcast(message, 0);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+	}
+}
+
+
+//ajouter la raison du depart
+void	Server::partCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, " PART Need more parameters");
+	std::vector<std::string> channels = splitChannels(vec[1]);
+	std::string reason;
+	if (vec.size() > 2)
+	{
+		for (size_t i = 2; i < vec.size(); i++)
+		{
+			if (i > 2) reason += " ";
+			reason += vec[i];
+		}
+		if (!reason.empty() && reason[0] == ':')
+			reason.erase(0, 1);
+	}
+	for (size_t i = 0; i < channels.size(); i++)
+	{
+		std::string channel_name = channels[i];
+		if (channel_name.empty() || channel_name[0] != '#')
+			return sendMessageFromServ(fd, 476, channel_name + " :Invalid channel name.");
+		Channel* channel_ptr = getChannelByName(channel_name);
+		if (!channel_ptr)
+			return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+		if (!channel_ptr->hasClient(fd))
+			return sendMessageFromServ(fd, 442, channel_name + " :You are not on that channel");
+		std::string msg = ":" + client->getPrefix() + " PART " + channel_name;
+		if (!reason.empty())
+			msg += " :" + reason;
+		msg += "\r\n";
+		channel_ptr->broadcast(msg, -1);
+		channel_ptr->removeClient(fd);
+		if (channel_ptr->isEmpty())
+		{
+			delete channel_ptr;
+			_channels.erase(channel_name);
+		}
 	}
 }
 
