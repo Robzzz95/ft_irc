@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 13:24:53 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/24 15:07:48 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -319,7 +319,7 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 		closeConnection(fd);
 		return ;
 	}
-	if (vec.size() != 2)
+	if (vec.size() != 2 || vec[1].empty())
 	{
 		//erreur wrong parameters!
 		return ;
@@ -420,10 +420,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	if (!sender->getRegistered())
 		return sendMessageFromServ(fd, 451, "You have not registered.");
 	if (vec.size() < 2)
-	{
-		//gerer l'erreur pas assez de parametres
-		return ;
-	}
+		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
 	
 	std::string command, recipient, message;
 	recipient = vec[1];
@@ -491,24 +488,16 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 	if (!client->getRegistered())
-	{
-		sendMessageFromServ(fd, 451, "you must register first.");
-		return ;
-	}
-	if (vec.size() < 2)
-	{
-		//erreur pas assez de parametres
-		return ;
-	}
+		return sendMessageFromServ(fd, 451, "you must register first.");
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
 	std::vector<std::string>	channels = splitChannels(vec[1]);
+
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];	
 		if (channel_name.empty() || channel_name[0] != '#')
-		{
-			sendMessageFromServ(fd, 476, "Invalid channel name.");
-			return ;
-		}
+			return sendMessageFromServ(fd, 476, "Invalid channel name.");
 		if (_channels.find(channel_name) == _channels.end())
 		{
 			Channel*	new_channel = new Channel(channel_name);
@@ -516,7 +505,7 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 			_channels[channel_name] = new_channel;
 		}
 		else
-		_channels[channel_name]->addClient(fd, client);
+			_channels[channel_name]->addClient(fd, client);
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() \
 		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
 		_channels[channel_name]->broadcast(message);
@@ -531,7 +520,7 @@ std::vector<std::string>	Server::splitChannels(const std::string &str)
 
 	for (size_t i = 0; i < str.length(); i++)
 	{
-		if (str[i] == ',' || str[i] == '#')
+		if (str[i] == ',')
 		{
 			if (!tmp.empty())
 				dest.push_back(tmp);
