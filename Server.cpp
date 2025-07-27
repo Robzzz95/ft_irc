@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 16:54:34 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/27 14:24:14 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -320,26 +320,17 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 		return ;
 	}
 	if (vec.size() != 2 || vec[1].empty())
-	{
-		//erreur wrong parameters!
-		return ;
-	}
+		return sendMessageFromServ(fd, 464, "Error: NICK wrong parameters");
 	if (!isValidNickname(vec[1]))
-	{
-		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-		return ;
-	}
+		return sendMessageFromServ(fd, 432, "Error: invalid nickname.");
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
-		if (it->second->getNickname() == vec[1])
-		{
-			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
-			return ;
-		}
+		if (it->first != fd && it->second->getNickname() == vec[1])
+			return sendMessageFromServ(fd, 433, "Nickname already in use.");
 	}
-	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getRealname() + " NICK " + vec[1] + "\r\n"));
+	sendRawMessage(fd, (client->getPrefix() + " NICK :" + vec[1] + "\r\n"));
 	client->setNickname(vec[1]);
+	//notifier tous les channels
 }
 
 bool	Server::isValidNickname(const std::string &nickname)
@@ -389,11 +380,12 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 	client->setUsername(username);
 	client->setRealname(realname);
 	client->setRegistered(true);
-	sendMessageFromServ(fd, 001, client->getNickname() + " :Welcome to the IRC Network " +
-		client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname());
-	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is ft_irc, running version v1.0");
+	sendMessageFromServ(fd, 001, client->getNickname() + " :Welcome to the IRC Network " + client->getPrefix());
+	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is " + _name + " , running version v1.0");
 	sendMessageFromServ(fd, 003, client->getNickname() + " :This server was created Mon Jun 10 2025 at 13:45:00");
-	sendMessageFromServ(fd, 004, client->getNickname() + " ft_irc v1.0 ao mtov");
+	sendMessageFromServ(fd, 004, _name + " v1.0 o o");
+	// sendMessageFromServ(fd, 005, client->getNickname() + "CHANTYPES=# PREFIX=(o)@ CHANMODES=o");
+	// sendMessageFromServ(fd, 376, "End of /MOTD command.");
 }
 
 void	Server::quitCommand(int fd, std::vector<std::string> vec)
@@ -442,14 +434,15 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 			return sendMessageFromServ(fd, 403, recipient + " :No such channel");
 		if (!channel->hasClient(fd))
 			return sendMessageFromServ(fd, 404, recipient + " :Cannot send to channel");
-		channel->broadcast(":" + sender->getNickname() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
+		channel->broadcast(sender->getPrefix() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
 		return ;
 	}
 	//private message 
 	Client*	target = findClientByNickname(recipient);
 	if (!target)
 		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
-	std::string full_message = ":" + sender->getNickname() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
+	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
+	std::cerr << "MESSAGE: " << full_message << std::endl;
 	sendRawMessage(target->getFd(), full_message);
 }
 
@@ -476,12 +469,15 @@ Channel*	Server::getChannelByName(const std::string &str)
 
 void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
-	if (vec.size() < 2)
-	{
-		sendRawMessage(fd, ":PONG " + _name + "\r\n");
-		return ;
-	}
-	sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
+	// if (vec.size() < 2)
+	// {
+	// 	sendRawMessage(fd, ":PONG " + _name + "\r\n");
+	// 	return ;
+	// }
+	// sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
+
+	std::string token = (vec.size() >= 2) ? vec[1] : _name;
+	sendRawMessage(fd, ":" + _name + " PONG :" + token + "\r\n");
 }
 
 void	Server::joinCommand(int fd, std::vector<std::string> vec)

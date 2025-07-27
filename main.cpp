@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 13:23:12 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/27 14:28:53 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -49,12 +49,11 @@ to do list:
 get the nick command to refuse duplicates
 get pingpong command to count time and respond better
 ?class Message?
-msg command to work on channels
 operators handling with all the MODE commands
-channels dont broadcast properly
 get the modes for channels
 get ctrl+Z to work properly
 some inputs outputs should get done properly, might have issues so far 
 get the join command to parse better, need some improvement (/join ######) for exemple
 add missing commands
+probably add bool for hasSentNick (and validated) and hasSentUser for proper registration -> dont send weclome message unless we get both
 */
