@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 14:28:53 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/27 14:39:18 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,6 @@ int	main(int ac, char **av)
 
 /*
 to do list:
-get the nick command to refuse duplicates
 get pingpong command to count time and respond better
 ?class Message?
 operators handling with all the MODE commands

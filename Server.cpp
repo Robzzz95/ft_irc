@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 14:24:14 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/27 14:39:48 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -326,7 +326,7 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (it->first != fd && it->second->getNickname() == vec[1])
-			return sendMessageFromServ(fd, 433, "Nickname already in use.");
+			return sendMessageFromServ(fd, 433, "Nickname already in use."), closeConnection(fd);
 	}
 	sendRawMessage(fd, (client->getPrefix() + " NICK :" + vec[1] + "\r\n"));
 	client->setNickname(vec[1]);
@@ -442,7 +442,6 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	if (!target)
 		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
 	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
-	std::cerr << "MESSAGE: " << full_message << std::endl;
 	sendRawMessage(target->getFd(), full_message);
 }
 
