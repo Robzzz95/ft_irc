@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 14:52:50 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 17:07:40 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -486,7 +486,7 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 		return sendMessageFromServ(fd, 451, "you must register first.");
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
-	std::vector<std::string>	channels = splitChannels(vec[1]);
+	std::vector<std::string>	channels = splitList(vec[1]);
 
 	for (size_t i = 0; i < channels.size(); i++)
 	{
@@ -515,7 +515,7 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 	Client*	client = _clients[fd];
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, " PART Need more parameters");
-	std::vector<std::string> channels = splitChannels(vec[1]);
+	std::vector<std::string> channels = splitList(vec[1]);
 	std::string reason;
 	if (vec.size() > 2)
 	{
@@ -551,7 +551,7 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 	}
 }
 
-std::vector<std::string>	Server::splitChannels(const std::string &str)
+std::vector<std::string>	Server::splitList(const std::string &str)
 {
 	std::vector<std::string>	dest;
 	std::string	tmp;
@@ -659,7 +659,6 @@ void	Server::topicCommand(int fd, std::vector<std::string> vec)
 		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
 	if (!channel->hasClient(fd))
 		return sendMessageFromServ(fd, 442, channel_name + " : You're not on that channel");
-	
 	if (vec.size() == 2)
 	{
 		if (channel->getTopic().empty())
@@ -679,17 +678,69 @@ void	Server::topicCommand(int fd, std::vector<std::string> vec)
 		new_topic.erase(0, 1);
 	channel->setTopic(new_topic);
 	std::string msg = client->getPrefix() + " TOPIC " + channel_name + " :" + new_topic + "\r\n";
-	channel->broadcast(msg, fd);
-	sendRawMessage(fd, msg);
+	channel->broadcast(msg, -1);
+	// sendRawMessage(fd, msg);
 }
 
 void	Server::kickCommand(int fd, std::vector<std::string> vec)
 {
-	
+	Client*	client = _clients[fd];
+	if (vec.size() < 3)
+		return sendMessageFromServ(fd, 461, "KICK :Not enough parameters");
+	std::string channel_name = vec[1];
+	std::vector<std::string> target_list = splitList(vec[2]);
+	std::string reason = "Kicked";
+	Channel* channel = getChannelByName(channel_name);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, channel_name + " :You're not on that channel");
+	if (!channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, channel_name + " :You're not channel operator");
+	if (vec.size() > 3)
+	{
+		reason.clear();
+		for (size_t i = 3; i < vec.size(); i++)
+		{
+			reason += vec[i];
+			if (i + 1 < vec.size())
+				reason += " ";
+		}
+		if (!reason.empty() && reason[0] == ':')
+			reason.erase(0, 1);
+	}
+	for (size_t i = 0; i < target_list.size(); i++)
+	{
+		Client* target = findClientByNickname(target_list[i]);
+		if (!target || !channel->hasClient(target->getFd()))
+		{
+			sendMessageFromServ(fd, 441, target_list[i] + " " + channel_name + " They aren't on that channel");
+			continue ;
+		}
+		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target->getNickname() + " :" + reason + "\r\n";
+		channel->broadcast(msg, -1);
+		channel->removeClient(target->getFd());
+	}
 }
 
 void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 {
-
-	
+	Client*	client = _clients[fd];
+	if (vec.size() < 2)
+		return sendMessageFromServ(fd, 461, "INVITE : Not enough parameters");
+	Client*	target = findClientByNickname(vec[1]);
+	if (!target)
+		return sendMessageFromServ(fd, 401, vec[1] + " :No such nick");
+	Channel* channel = getChannelByName(vec[2]);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, vec[2] + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, vec[2] + " :You're not on that channel");
+	if (channel->isInviteOnly() && !channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, vec[2] + " :You're not channel operator");
+	if (channel->hasClient(target->getFd()))
+		return sendMessageFromServ(fd, 443, vec[1] + " " + vec[2] + " :Is already on channel");
+	std::string msg = client->getPrefix() + " INVITE " + vec[1] + " " + vec[2];
+	sendRawMessage(target->getFd(), msg + "\r\n");
+	sendMessageFromServ(fd, 341, vec[1] + " " + vec[2]);
 }

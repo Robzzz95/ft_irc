@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 12:14:58 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 15:54:45 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,7 +62,7 @@ public:
 	void	pingCommand(int fd, std::vector<std::string> vec);
 	void	joinCommand(int fd, std::vector<std::string> vec);
 	void	partCommand(int fd, std::vector<std::string> vec);
-	std::vector<std::string>	splitChannels(const std::string &str);
+	std::vector<std::string>	splitList(const std::string &str);
 	void	capCommand(int fd, std::vector<std::string> vec);
 	void	modeCommand(int fd, std::vector<std::string> vec);
 	void	whoisCommand(int fd, std::vector<std::string> vec);
