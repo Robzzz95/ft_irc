@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 13:09:41 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 17:28:58 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -31,6 +31,7 @@ private:
 	bool	_has_limit;
 	int		_limit;
 	std::string	_password;
+	std::set<int> _invited_clients;
 public:
 	Channel(const std::string &name);
 	~Channel();
@@ -50,16 +51,23 @@ public:
 
 	bool	isInviteOnly() const;
 	void	setInviteOnly(bool value);
+	void	addInvited(int fd);
+	void	removeInvited(int fd);
+	bool	isInvited(int fd);
+	
 	bool	isTopicLocked()	const;
 	void	setTopicLocked(bool value);
+
 	bool	hasPassword() const;
 	void	setHasPassword(bool value);
 	void	setPassword(const std::string &new_password);
 	const std::string &	getPassword() const;
+
 	bool	hasLimit() const;
 	void	setHasLimit(bool value);
 	int		getLimit() const;
 	void	setLimit(int new_limit);
+
 	bool	isEmpty() const;
 
 	void	broadcast(const std::string &message, int except_fd);

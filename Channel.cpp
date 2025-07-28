@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 14:52:32 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 17:29:38 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -109,6 +109,21 @@ bool	Channel::isInviteOnly() const
 void	Channel::setInviteOnly(bool value)
 {
 	_is_invite_only = value;
+}
+
+void	Channel::addInvited(int fd)
+{
+	_invited_clients.insert(fd);
+}
+
+void	Channel::removeInvited(int fd)
+{
+	_invited_clients.erase(fd);
+}
+
+bool	Channel::isInvited(int fd)
+{
+	return _invited_clients.count(fd) > 0;
 }
 
 bool	Channel::isTopicLocked() const

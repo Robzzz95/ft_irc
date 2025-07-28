@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 17:07:40 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 17:30:24 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -741,6 +741,7 @@ void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 	if (channel->hasClient(target->getFd()))
 		return sendMessageFromServ(fd, 443, vec[1] + " " + vec[2] + " :Is already on channel");
 	std::string msg = client->getPrefix() + " INVITE " + vec[1] + " " + vec[2];
+	channel->addInvited(target->getFd());
 	sendRawMessage(target->getFd(), msg + "\r\n");
 	sendMessageFromServ(fd, 341, vec[1] + " " + vec[2]);
 }
