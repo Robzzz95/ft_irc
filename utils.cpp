@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 15:29:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 12:14:47 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -52,4 +52,21 @@ std::vector<std::string> splitIrc(const std::string & line)
 		dest.push_back(word);
 	}
 	return (dest);
+}
+
+bool	isValidNickname(const std::string &nickname)
+{
+	if (nickname.empty() || nickname.size() > 9)
+		return (false);
+
+	char c = nickname[0];
+	if (!isalpha(c) && std::string (" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+		return (false);
+	for (size_t i = 1; i < nickname.size(); i++)
+	{
+		c = nickname[i];
+		if (!isalnum(c) && std::string(" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+			return (false);
+	}
+	return (true);
 }

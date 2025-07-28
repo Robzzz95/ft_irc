@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 14:39:18 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 13:04:30 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -55,4 +55,5 @@ some inputs outputs should get done properly, might have issues so far
 get the join command to parse better, need some improvement (/join ######) for exemple
 add missing commands
 probably add bool for hasSentNick (and validated) and hasSentUser for proper registration -> dont send weclome message unless we get both
+join and invite add limit to channels
 */

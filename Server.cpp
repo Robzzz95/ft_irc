@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 14:39:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 14:52:50 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -66,9 +66,9 @@ void	Server::initCommands()
 	_commands["MODE"] = &Server::modeCommand;
 	_commands["WHOIS"] = &Server::whoisCommand;
 	_commands["PART"] = &Server::partCommand;
-	// _commands[] = &Server:: ;
-	// _commands[] = &Server:: ;
-	// _commands[] = &Server:: ;
+	_commands["KICK"] = &Server::kickCommand;
+	_commands["INVITE"] = &Server::inviteCommand;
+	_commands["TOPIC"] = &Server::topicCommand;
 	// _commands[] = &Server:: ;
 
 }
@@ -223,8 +223,8 @@ void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 	if (code != 0)
 	{
 		oss << ":" << _name << " " \
-			<< std::setfill('0') << std::setw(3) << code << " " \
-			<< (client->getNickname().empty() ? "*" : client->getNickname()) << ": " \
+			<< std::setw(3) << std::setfill('0') << code << " " \
+			<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :" \
 			<< message << "\r\n";
 	}
 	else
@@ -333,7 +333,7 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 	//notifier tous les channels
 }
 
-bool	Server::isValidNickname(const std::string &nickname)
+bool	isValidNickname(const std::string &nickname)
 {
 	if (nickname.empty() || nickname.size() > 9)
 		return (false);
@@ -645,4 +645,51 @@ void	Server::whoisCommand(int fd, std::vector<std::string> vec)
 	}
 	std::string message = client->getNickname() + " " + name + " :No such nick/channel";
 	sendMessageFromServ(fd, 401, message);
+}
+
+void	Server::topicCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "TOPIC :Not enough parameters");
+	std::string channel_name = vec[1];
+	Channel* channel = getChannelByName(channel_name);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, channel_name + " : You're not on that channel");
+	
+	if (vec.size() == 2)
+	{
+		if (channel->getTopic().empty())
+			return sendMessageFromServ(fd, 331, channel_name + " :No topic is set");
+		return sendMessageFromServ(fd, 332, channel_name + " :" + channel->getTopic());
+	}
+	if (channel->isTopicLocked() && !channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, channel_name + " You're not channel operator");
+	std::string new_topic = "";
+	for (size_t i = 2; i < vec.size(); i++)
+	{
+		new_topic += vec[i];
+		if (i + 1 < vec.size())
+			new_topic += ' ';
+	}
+	if (!new_topic.empty() && vec[2][0] == ':')
+		new_topic.erase(0, 1);
+	channel->setTopic(new_topic);
+	std::string msg = client->getPrefix() + " TOPIC " + channel_name + " :" + new_topic + "\r\n";
+	channel->broadcast(msg, fd);
+	sendRawMessage(fd, msg);
+}
+
+void	Server::kickCommand(int fd, std::vector<std::string> vec)
+{
+	
+}
+
+void	Server::inviteCommand(int fd, std::vector<std::string> vec)
+{
+
+	
 }

@@ -6,14 +6,22 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 16:55:36 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 14:52:32 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Channel.hpp"
 
-Channel::Channel(const std::string &name) : _name(name), _topic("")
+Channel::Channel(const std::string &name)
 {
+	_name = name;
+	 _topic = "";
+	_is_invite_only = false;
+	_is_topic_locked = false;
+	_has_password = false;
+	_has_limit = false;
+	_limit = -1;
+	_password = "";
 }
 
 Channel::~Channel()
@@ -85,11 +93,75 @@ void	Channel::broadcast(const std::string &message, int except_fd)
 		if (it->first == except_fd)
 			continue ;
 		send(it->first, message.c_str(), message.size(), 0);
-		
 	}
 }
 
 bool	Channel::isEmpty() const
 {
 	return _clients.empty();
+}
+
+bool	Channel::isInviteOnly() const
+{
+	return (_is_invite_only);
+}
+
+void	Channel::setInviteOnly(bool value)
+{
+	_is_invite_only = value;
+}
+
+bool	Channel::isTopicLocked() const
+{
+	return (_is_topic_locked);
+}
+
+void	Channel::setTopicLocked(bool value)
+{
+	_is_topic_locked = value;
+}
+
+bool	Channel::hasPassword() const
+{
+	return (_has_password);
+}
+
+void	Channel::setHasPassword(bool value)
+{
+	_has_password = value;
+}
+
+void	Channel::setPassword(const std::string &new_password)
+{
+	_password = new_password;
+}
+
+const std::string &	Channel::getPassword() const
+{
+	return (_password);
+}
+
+bool	Channel::isInviteOnly() const
+{
+	return (_is_invite_only);
+}
+
+bool	Channel::hasLimit() const
+{
+	return (_has_limit);
+}
+
+void	Channel::setHasLimit(bool value)
+{
+	_has_limit = value;
+}
+
+int		Channel::getLimit() const
+{
+	return (_limit);	
+}
+
+void	Channel::setLimit(int new_limit)
+{
+	_limit = new_limit;
 }

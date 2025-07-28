@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 16:54:52 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 13:09:41 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -25,8 +25,12 @@ private:
 	std::map<int, Client*>	_clients;
 	std::set<int>	_operators;
 
-	// bool	_invite_only;
-	// std::string	_password;
+	bool	_is_invite_only;
+	bool	_is_topic_locked;
+	bool	_has_password;
+	bool	_has_limit;
+	int		_limit;
+	std::string	_password;
 public:
 	Channel(const std::string &name);
 	~Channel();
@@ -45,14 +49,20 @@ public:
 	void	removeOperator(int fd);
 
 	bool	isInviteOnly() const;
-	bool	hasPassword() const;
+	void	setInviteOnly(bool value);
 	bool	isTopicLocked()	const;
-	void	setMode(char mode);
+	void	setTopicLocked(bool value);
+	bool	hasPassword() const;
+	void	setHasPassword(bool value);
+	void	setPassword(const std::string &new_password);
+	const std::string &	getPassword() const;
+	bool	hasLimit() const;
+	void	setHasLimit(bool value);
+	int		getLimit() const;
+	void	setLimit(int new_limit);
 	bool	isEmpty() const;
 
 	void	broadcast(const std::string &message, int except_fd);
-
-
 };
 
 

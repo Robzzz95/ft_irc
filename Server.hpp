@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 16:21:34 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/28 12:14:58 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,6 @@ public:
 
 	void	passCommand(int fd, std::vector<std::string> vec);
 	void	nickCommand(int fd, std::vector<std::string> vec);
-	bool	isValidNickname(const std::string &nickname);
 	void	userCommand(int fd, std::vector<std::string> vec);
 	void	quitCommand(int fd, std::vector<std::string> vec);
 	void	privmsgCommand(int fd, std::vector<std::string> vec);
@@ -67,6 +66,10 @@ public:
 	void	capCommand(int fd, std::vector<std::string> vec);
 	void	modeCommand(int fd, std::vector<std::string> vec);
 	void	whoisCommand(int fd, std::vector<std::string> vec);
+	void	kickCommand(int fd, std::vector<std::string> vec);
+	void	inviteCommand(int fd, std::vector<std::string> vec);
+	void	topicCommand(int fd, std::vector<std::string> vec);
+
 };
 
 
