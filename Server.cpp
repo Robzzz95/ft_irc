@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 16:53:13 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 17:12:23 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -347,23 +347,6 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 	//notifier tous les channels
 }
 
-bool	isValidNickname(const std::string &nickname)
-{
-	if (nickname.empty() || nickname.size() > 9)
-		return (false);
-
-	char c = nickname[0];
-	if (!isalpha(c) && std::string (" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
-		return (false);
-	for (size_t i = 1; i < nickname.size(); i++)
-	{
-		c = nickname[i];
-		if (!isalnum(c) && std::string(" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
-			return (false);
-	}
-	return (true);
-}
-
 void	Server::userCommand(int fd, std::vector<std::string> vec)
 {
 	if (_clients.find(fd) == _clients.end())
@@ -481,6 +464,7 @@ Channel*	Server::getChannelByName(const std::string &str)
 
 void	Server::pongCommand(int fd, std::vector<std::string> vec)
 {
+	(void)vec;
 	Client* client = _clients[fd];
 	client->updateActivity();
 }
