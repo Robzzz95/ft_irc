@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/25 14:19:20 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 15:54:14 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -33,6 +33,10 @@ private:
 	bool	_registered;
 	
 	std::string _prefix;
+
+	time_t	_last_ping;
+	time_t	_last_activity;
+	bool	_awaiting_pong;
 	
 public:
 	Client(int fd, const std::string &ip, const std::string &hostname);
@@ -58,7 +62,14 @@ public:
 	void	appendToBuffer(const std::string &str);
 	std::vector<std::string>	extractLines();
 
-
+	bool	isAwaitingPong() const;
+	void	setAwaitingPong(bool value);
+	void	setLastPing(time_t time);
+	void	setLastActivity(time_t time);
+	time_t	getLastPing() const;
+	time_t	getLastActivity() const;
+	void	updateActivity();
+	
 };
 
 

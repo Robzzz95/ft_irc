@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 12:14:23 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:47:00 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,9 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_authentificated = false;
 	_registered = false;
 	_prefix = "";
+	_last_ping = -1;
+	_last_activity = -1;
+	_awaiting_pong = false;
 }
 
 Client::~Client()
@@ -124,3 +127,39 @@ std::vector<std::string>	Client::extractLines()
 	return (lines);
 }
 
+
+bool	Client::isAwaitingPong() const
+{
+	return (_awaiting_pong);
+}
+
+void	Client::setAwaitingPong(bool value)
+{
+	_awaiting_pong = value;
+}
+
+void	Client::setLastPing(time_t time)
+{
+	_last_ping = time;
+}
+
+void	Client::setLastActivity(time_t time)
+{
+	_last_activity = time;
+}
+
+time_t	Client::getLastPing() const
+{
+	return (_last_ping);
+}
+
+time_t	Client::getLastActivity() const
+{
+	return (_last_activity);
+}
+
+void	Client::updateActivity()
+{
+	_last_activity = time(NULL);
+	_awaiting_pong = false;
+}

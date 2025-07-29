@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 17:30:24 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:53:13 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,6 +61,7 @@ void	Server::initCommands()
 	_commands["QUIT"] = &Server::quitCommand;
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
+	_commands["PONG"] = &Server::pingCommand;
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
@@ -69,14 +70,19 @@ void	Server::initCommands()
 	_commands["KICK"] = &Server::kickCommand;
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
-	// _commands[] = &Server:: ;
-
+	// _commands["WHO"] = &Server:: ;
+	// _commands["NOTICE"] = &Server:: ;
+	// _commands["NAMES"] = &Server:: ;
+	// _commands["LIST"] = &Server:: ;
+	// _commands[] = &Server:: ; //send file
+	// _commands[] = &Server:: ; //receive file
 }
 
 void	Server::initServ()
 {
 	setupSocket();
 	initCommands();
+	time_t lastTimeoutCheck = time(NULL);
 	while (g_running)
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
@@ -96,6 +102,12 @@ void	Server::initServ()
 				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
 					handleClient(_poll_fds[i].fd);
 			}
+		}
+		time_t now = time(NULL);
+		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
+		{
+			checkClientTimeouts();
+			lastTimeoutCheck = now;
 		}
 	}
 }
@@ -189,6 +201,7 @@ void	Server::handleClient(int fd)
 	std::cout << "FROM CLIENT: " << buffer << std::endl;
 
 	Client *client = _clients[fd];
+	client->updateActivity();
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
 	for (size_t i = 0; i < lines.size(); i++)
@@ -210,6 +223,7 @@ int	Server::processCommand(int fd, const std::string &line)
 		commandHandler	handler = it->second;
 		(this->*handler)(fd, vec);
 		
+		//rajouter une meilleure gestion de commandes non existantes
 		if (_clients.find(fd) == _clients.end())
 			return (1);
 	}
@@ -465,18 +479,43 @@ Channel*	Server::getChannelByName(const std::string &str)
 	return (NULL);
 }
 
+void	Server::pongCommand(int fd, std::vector<std::string> vec)
+{
+	Client* client = _clients[fd];
+	client->updateActivity();
+}
 
 void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
-	// if (vec.size() < 2)
-	// {
-	// 	sendRawMessage(fd, ":PONG " + _name + "\r\n");
-	// 	return ;
-	// }
-	// sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
-
+	Client*	client = _clients[fd];
 	std::string token = (vec.size() >= 2) ? vec[1] : _name;
+	client->setLastActivity(time(NULL));
 	sendRawMessage(fd, ":" + _name + " PONG :" + token + "\r\n");
+}
+
+void	Server::checkClientTimeouts()
+{
+	time_t now = time(NULL);
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		Client*	client = it->second;
+		if (client->isAwaitingPong())
+		{
+			if (now - client->getLastPing() > PING_TIMEOUT)
+			{
+				sendRawMessage(client->getFd(), "ERROR :Ping timeout\r\n");
+				closeConnection(client->getFd());
+			}
+		}
+		else if (now - client->getLastActivity() > PING_CHECK)
+		{
+			std::stringstream ss;
+			ss << "PING :" << now << "\r\n";
+			client->setLastPing(now);
+			client->setAwaitingPong(true);
+			sendRawMessage(client->getFd(), ss.str());
+		}
+	}
 }
 
 void	Server::joinCommand(int fd, std::vector<std::string> vec)

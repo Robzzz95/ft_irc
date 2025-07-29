@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 12:14:54 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 15:41:34 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -19,6 +19,10 @@
 #define GREEN "\e[1;32m"
 
 #define BUFFER_SIZE 512
+
+#define TIMEOUT_CHECK 10
+#define PING_TIMEOUT 60
+#define PING_CHECK 30
 
 #include <iostream>
 #include <vector>

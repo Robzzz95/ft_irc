@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 15:54:45 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:51:43 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,7 @@ public:
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
 	void	removeClientFromAllChannels(int fd);
+	void	checkClientTimeouts();
 
 	void	passCommand(int fd, std::vector<std::string> vec);
 	void	nickCommand(int fd, std::vector<std::string> vec);
@@ -60,6 +61,7 @@ public:
 	Client*		findClientByNickname(const std::string &nickname);
 	Channel*	getChannelByName(const std::string &str);
 	void	pingCommand(int fd, std::vector<std::string> vec);
+	void	pongCommand(int fd, std::vector<std::string> vec);
 	void	joinCommand(int fd, std::vector<std::string> vec);
 	void	partCommand(int fd, std::vector<std::string> vec);
 	std::vector<std::string>	splitList(const std::string &str);

@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 17:30:47 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/29 16:42:19 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,14 +47,12 @@ int	main(int ac, char **av)
 /*
 to do list:
 get pingpong command to count time and respond better
-?class Message?
 operators handling with all the MODE commands
 get the modes for channels
 get ctrl+Z to work properly
 some inputs outputs should get done properly, might have issues so far 
-get the join command to parse better, need some improvement (/join ######) for exemple
 add missing commands
-probably add bool for hasSentNick (and validated) and hasSentUser for proper registration -> dont send weclome message unless we get both
 join and invite add limit to channels
-join should check for restricted channels
+join should check for restricted channels and check for _invited_clients
+part should delete a channel while the bot is still in it ?
 */
