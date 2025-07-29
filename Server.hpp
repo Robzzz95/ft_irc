@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 14:14:59 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:39:04 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,6 @@ public:
 
 	void	passCommand(int fd, std::vector<std::string> vec);
 	void	nickCommand(int fd, std::vector<std::string> vec);
-	bool	isValidNickname(const std::string &nickname);
 	void	userCommand(int fd, std::vector<std::string> vec);
 	void	quitCommand(int fd, std::vector<std::string> vec);
 	void	privmsgCommand(int fd, std::vector<std::string> vec);
@@ -62,10 +61,15 @@ public:
 	Channel*	getChannelByName(const std::string &str);
 	void	pingCommand(int fd, std::vector<std::string> vec);
 	void	joinCommand(int fd, std::vector<std::string> vec);
-	std::vector<std::string>	splitChannels(const std::string &str);
+	void	partCommand(int fd, std::vector<std::string> vec);
+	std::vector<std::string>	splitList(const std::string &str);
 	void	capCommand(int fd, std::vector<std::string> vec);
 	void	modeCommand(int fd, std::vector<std::string> vec);
 	void	whoisCommand(int fd, std::vector<std::string> vec);
+	void	kickCommand(int fd, std::vector<std::string> vec);
+	void	inviteCommand(int fd, std::vector<std::string> vec);
+	void	topicCommand(int fd, std::vector<std::string> vec);
+
 };
 
 

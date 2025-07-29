@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/22 23:08:24 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:38:43 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -27,7 +27,7 @@ class Channel
 
 	// bool	_invite_only;
 	// std::string	_password;
-  public:
+public:
 	Channel(const std::string &name);
 	~Channel();
 
@@ -44,12 +44,14 @@ class Channel
 	void makeOperator(int fd);
 	void removeOperator(int fd);
 
-	bool isInviteOnly() const;
-	bool hasPassword() const;
-	bool isTopicLocked() const;
-	void setMode(char mode);
+	bool	isInviteOnly() const;
+	bool	hasPassword() const;
+	bool	isTopicLocked()	const;
+	void	setMode(char mode);
 
-	void broadcast(const std::string &message);
+	void	broadcast(const std::string &message);
+
+
 };
 
 #endif

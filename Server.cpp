@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 18:06:34 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:38:58 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,10 +65,10 @@ void	Server::initCommands()
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
 	_commands["WHOIS"] = &Server::whoisCommand;
-	// _commands[] = &Server:: ;
-	// _commands[] = &Server:: ;
-	// _commands[] = &Server:: ;
-	// _commands[] = &Server:: ;
+	_commands["PART"] = &Server::partCommand;
+	_commands["KICK"] = &Server::kickCommand;
+	_commands["INVITE"] = &Server::inviteCommand;
+	_commands["TOPIC"] = &Server::topicCommand;
 	// _commands[] = &Server:: ;
 
 }
@@ -223,8 +223,8 @@ void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 	if (code != 0)
 	{
 		oss << ":" << _name << " " \
-			<< std::setfill('0') << std::setw(3) << code << " " \
-			<< (client->getNickname().empty() ? "*" : client->getNickname()) << ": " \
+			<< std::setw(3) << std::setfill('0') << code << " " \
+			<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :" \
 			<< message << "\r\n";
 	}
 	else
@@ -319,48 +319,30 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 		closeConnection(fd);
 		return;
 	}
-	if (vec.size() != 2 || vec[1].find(' ') != std::string::npos || vec[1].empty()) {
-    sendMessageFromServ(fd, 431, "No nickname given");
-    return;
-}
-	std::string new_nick = vec[1];
-	if (!isValidNickname(new_nick))
+	if (vec.size() != 2)
+	{
+		//erreur wrong parameters!
+		return ;
+	}
+	if (!isValidNickname(vec[1]))
 	{
 		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-		return;
+		return ;
 	}
-	// Si le nick est déjà celui du client, ne rien faire
-	if (client->getNickname() == new_nick)
-		return;
-
-	// Cherche un nick libre, ajoute des _ si besoin
-	std::string candidate = new_nick;
-	while (true) {
-    bool taken = false;
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++) {
-        if (it->second->getNickname() == candidate && it->first != fd) {
-            taken = true;
-            break;
-        }
-    }
-    if (!taken)
-        break;
-    if (candidate.length() < 9)
-        candidate += "_";
-    else {
-        sendMessageFromServ(fd, 433, "Nickname is already in use and cannot be modified further.");
-        return;
-    }
-}
-
-	// Envoie le message de changement de nick
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (it->second->getNickname() == vec[1])
+		{
+			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
+			return ;
+		}
+	}
 	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getRealname() + " NICK " + candidate + "\r\n"));
-	client->setNickname(candidate);
-	sendMessageFromServ(fd, 0, "You're now known as " + candidate);
+		+ "@" + client->getRealname() + " NICK " + vec[1] + "\r\n"));
+	client->setNickname(vec[1]);
 }
 
-bool	Server::isValidNickname(const std::string &nickname)
+bool	isValidNickname(const std::string &nickname)
 {
 	if (nickname.empty() || nickname.size() > 9)
 		return (false);
@@ -407,11 +389,12 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 	client->setUsername(username);
 	client->setRealname(realname);
 	client->setRegistered(true);
-	sendMessageFromServ(fd, 001, client->getNickname() + " :Welcome to the IRC Network " +
-		client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname());
-	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is ft_irc, running version v1.0");
+	sendMessageFromServ(fd, 001, client->getNickname() + " :Welcome to the IRC Network " + client->getPrefix());
+	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is " + _name + " , running version v1.0");
 	sendMessageFromServ(fd, 003, client->getNickname() + " :This server was created Mon Jun 10 2025 at 13:45:00");
-	sendMessageFromServ(fd, 004, client->getNickname() + " ft_irc v1.0 ao mtov");
+	sendMessageFromServ(fd, 004, _name + " v1.0 o o");
+	// sendMessageFromServ(fd, 005, client->getNickname() + "CHANTYPES=# PREFIX=(o)@ CHANMODES=o");
+	// sendMessageFromServ(fd, 376, "End of /MOTD command.");
 }
 
 void	Server::quitCommand(int fd, std::vector<std::string> vec)
@@ -438,10 +421,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	if (!sender->getRegistered())
 		return sendMessageFromServ(fd, 451, "You have not registered.");
 	if (vec.size() < 2)
-	{
-		//gerer l'erreur pas assez de parametres
-		return ;
-	}
+		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
 	
 	std::string command, recipient, message;
 	recipient = vec[1];
@@ -463,14 +443,14 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 			return sendMessageFromServ(fd, 403, recipient + " :No such channel");
 		if (!channel->hasClient(fd))
 			return sendMessageFromServ(fd, 404, recipient + " :Cannot send to channel");
-		channel->broadcast(":" + sender->getNickname() + " PRIVMSG " + recipient + " :" + message + "\r\n");
+		channel->broadcast(sender->getPrefix() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
 		return ;
 	}
 	//private message 
 	Client*target = findClientByNickname(recipient);
 	if (!target)
 		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
-	std::string full_message = ":" + sender->getNickname() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
+	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
 
@@ -497,36 +477,31 @@ Channel*	Server::getChannelByName(const std::string &str)
 
 void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
-	if (vec.size() < 2)
-	{
-		sendRawMessage(fd, ":PONG " + _name + "\r\n");
-		return ;
-	}
-	sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
+	// if (vec.size() < 2)
+	// {
+	// 	sendRawMessage(fd, ":PONG " + _name + "\r\n");
+	// 	return ;
+	// }
+	// sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
+
+	std::string token = (vec.size() >= 2) ? vec[1] : _name;
+	sendRawMessage(fd, ":" + _name + " PONG :" + token + "\r\n");
 }
 
 void	Server::joinCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 	if (!client->getRegistered())
-	{
-		sendMessageFromServ(fd, 451, "you must register first.");
-		return ;
-	}
-	if (vec.size() < 2)
-	{
-		//erreur pas assez de parametres
-		return ;
-	}
-	std::vector<std::string>	channels = splitChannels(vec[1]);
+		return sendMessageFromServ(fd, 451, "you must register first.");
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
+	std::vector<std::string>	channels = splitList(vec[1]);
+
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];	
 		if (channel_name.empty() || channel_name[0] != '#')
-		{
-			sendMessageFromServ(fd, 476, "Invalid channel name.");
-			return ;
-		}
+			return sendMessageFromServ(fd, 476, "Invalid channel name.");
 		if (_channels.find(channel_name) == _channels.end())
 		{
 			Channel*	new_channel = new Channel(channel_name);
@@ -534,22 +509,65 @@ void	Server::joinCommand(int fd, std::vector<std::string> vec)
 			_channels[channel_name] = new_channel;
 		}
 		else
-		_channels[channel_name]->addClient(fd, client);
+			_channels[channel_name]->addClient(fd, client);
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() \
 		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
-		_channels[channel_name]->broadcast(message);
+		_channels[channel_name]->broadcast(message, 0);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
 	}
 }
 
-std::vector<std::string>	Server::splitChannels(const std::string &str)
+
+//ajouter la raison du depart
+void	Server::partCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, " PART Need more parameters");
+	std::vector<std::string> channels = splitList(vec[1]);
+	std::string reason;
+	if (vec.size() > 2)
+	{
+		for (size_t i = 2; i < vec.size(); i++)
+		{
+			if (i > 2) reason += " ";
+			reason += vec[i];
+		}
+		if (!reason.empty() && reason[0] == ':')
+			reason.erase(0, 1);
+	}
+	for (size_t i = 0; i < channels.size(); i++)
+	{
+		std::string channel_name = channels[i];
+		if (channel_name.empty() || channel_name[0] != '#')
+			return sendMessageFromServ(fd, 476, channel_name + " :Invalid channel name.");
+		Channel* channel_ptr = getChannelByName(channel_name);
+		if (!channel_ptr)
+			return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+		if (!channel_ptr->hasClient(fd))
+			return sendMessageFromServ(fd, 442, channel_name + " :You are not on that channel");
+		std::string msg = ":" + client->getPrefix() + " PART " + channel_name;
+		if (!reason.empty())
+			msg += " :" + reason;
+		msg += "\r\n";
+		channel_ptr->broadcast(msg, -1);
+		channel_ptr->removeClient(fd);
+		if (channel_ptr->isEmpty())
+		{
+			delete channel_ptr;
+			_channels.erase(channel_name);
+		}
+	}
+}
+
+std::vector<std::string>	Server::splitList(const std::string &str)
 {
 	std::vector<std::string>	dest;
 	std::string	tmp;
 
 	for (size_t i = 0; i < str.length(); i++)
 	{
-		if (str[i] == ',' || str[i] == '#')
+		if (str[i] == ',')
 		{
 			if (!tmp.empty())
 				dest.push_back(tmp);
@@ -591,6 +609,21 @@ void	Server::modeCommand(int fd, std::vector<std::string> vec)
 	}
 	std::string name = vec[1];
 	std::string mode = vec[2];
+	// Channel* channel = getChannelByName(vec[1]);
+	// if (!channel)
+	// {
+	// 	//erreur
+	// 	return ;
+	// }
+	// if (mode == "-o")
+	// {
+	// 	// channel->setPrivileges(vec[3]);
+	// 	return ;
+	// }
+	// else if (mode == "-i")
+	// {
+		
+	// }
 	// if (!name || !mode)
 	// {
 	// 	//gerer l'erreur
@@ -621,4 +654,103 @@ void	Server::whoisCommand(int fd, std::vector<std::string> vec)
 	}
 	std::string message = client->getNickname() + " " + name + " :No such nick/channel";
 	sendMessageFromServ(fd, 401, message);
+}
+
+void	Server::topicCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "TOPIC :Not enough parameters");
+	std::string channel_name = vec[1];
+	Channel* channel = getChannelByName(channel_name);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, channel_name + " : You're not on that channel");
+	if (vec.size() == 2)
+	{
+		if (channel->getTopic().empty())
+			return sendMessageFromServ(fd, 331, channel_name + " :No topic is set");
+		return sendMessageFromServ(fd, 332, channel_name + " :" + channel->getTopic());
+	}
+	if (channel->isTopicLocked() && !channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, channel_name + " You're not channel operator");
+	std::string new_topic = "";
+	for (size_t i = 2; i < vec.size(); i++)
+	{
+		new_topic += vec[i];
+		if (i + 1 < vec.size())
+			new_topic += ' ';
+	}
+	if (!new_topic.empty() && vec[2][0] == ':')
+		new_topic.erase(0, 1);
+	channel->setTopic(new_topic);
+	std::string msg = client->getPrefix() + " TOPIC " + channel_name + " :" + new_topic + "\r\n";
+	channel->broadcast(msg, -1);
+	// sendRawMessage(fd, msg);
+}
+
+void	Server::kickCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+	if (vec.size() < 3)
+		return sendMessageFromServ(fd, 461, "KICK :Not enough parameters");
+	std::string channel_name = vec[1];
+	std::vector<std::string> target_list = splitList(vec[2]);
+	std::string reason = "Kicked";
+	Channel* channel = getChannelByName(channel_name);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, channel_name + " :You're not on that channel");
+	if (!channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, channel_name + " :You're not channel operator");
+	if (vec.size() > 3)
+	{
+		reason.clear();
+		for (size_t i = 3; i < vec.size(); i++)
+		{
+			reason += vec[i];
+			if (i + 1 < vec.size())
+				reason += " ";
+		}
+		if (!reason.empty() && reason[0] == ':')
+			reason.erase(0, 1);
+	}
+	for (size_t i = 0; i < target_list.size(); i++)
+	{
+		Client* target = findClientByNickname(target_list[i]);
+		if (!target || !channel->hasClient(target->getFd()))
+		{
+			sendMessageFromServ(fd, 441, target_list[i] + " " + channel_name + " They aren't on that channel");
+			continue ;
+		}
+		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target->getNickname() + " :" + reason + "\r\n";
+		channel->broadcast(msg, -1);
+		channel->removeClient(target->getFd());
+	}
+}
+
+void	Server::inviteCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	client = _clients[fd];
+	if (vec.size() < 2)
+		return sendMessageFromServ(fd, 461, "INVITE : Not enough parameters");
+	Client*	target = findClientByNickname(vec[1]);
+	if (!target)
+		return sendMessageFromServ(fd, 401, vec[1] + " :No such nick");
+	Channel* channel = getChannelByName(vec[2]);
+	if (!channel)
+		return sendMessageFromServ(fd, 403, vec[2] + " :No such channel");
+	if (!channel->hasClient(fd))
+		return sendMessageFromServ(fd, 442, vec[2] + " :You're not on that channel");
+	if (channel->isInviteOnly() && !channel->isOperator(fd))
+		return sendMessageFromServ(fd, 482, vec[2] + " :You're not channel operator");
+	if (channel->hasClient(target->getFd()))
+		return sendMessageFromServ(fd, 443, vec[1] + " " + vec[2] + " :Is already on channel");
+	std::string msg = client->getPrefix() + " INVITE " + vec[1] + " " + vec[2];
+	channel->addInvited(target->getFd());
+	sendRawMessage(target->getFd(), msg + "\r\n");
+	sendMessageFromServ(fd, 341, vec[1] + " " + vec[2]);
 }

@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 14:15:04 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:39:10 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,8 +47,26 @@ std::vector<std::string> splitIrc(const std::string & line)
 			std::getline(iss, rest);
 			word += rest;
 			dest.push_back(word);
+			break ;
 		}
 		dest.push_back(word);
 	}
 	return (dest);
+}
+
+bool	isValidNickname(const std::string &nickname)
+{
+	if (nickname.empty() || nickname.size() > 9)
+		return (false);
+
+	char c = nickname[0];
+	if (!isalpha(c) && std::string (" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+		return (false);
+	for (size_t i = 1; i < nickname.size(); i++)
+	{
+		c = nickname[i];
+		if (!isalnum(c) && std::string(" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
+			return (false);
+	}
+	return (true);
 }

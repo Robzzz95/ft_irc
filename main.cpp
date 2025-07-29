@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/24 14:14:29 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:38:53 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -45,15 +45,15 @@ int	main(int ac, char **av)
 
 /*
 to do list:
-get the nick command to refuse duplicates
 get pingpong command to count time and respond better
 ?class Message?
-msg command to work on channels
 operators handling with all the MODE commands
-channels dont broadcast properly
 get the modes for channels
 get ctrl+Z to work properly
 some inputs outputs should get done properly, might have issues so far 
 get the join command to parse better, need some improvement (/join ######) for exemple
 add missing commands
+probably add bool for hasSentNick (and validated) and hasSentUser for proper registration -> dont send weclome message unless we get both
+join and invite add limit to channels
+join should check for restricted channels
 */
