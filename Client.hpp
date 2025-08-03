@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/06/25 14:19:20 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/31 16:13:28 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,6 +28,8 @@ private:
 	std::string	_realname;
 
 	std::string	_buffer;
+	std::queue<std::string> _pending_messages;
+	time_t _last_activity;
 	
 	bool	_authentificated;
 	bool	_registered;
@@ -57,8 +59,11 @@ public:
 
 	void	appendToBuffer(const std::string &str);
 	std::vector<std::string>	extractLines();
-
-
+	
+	void updateActivity();
+	bool isInactive(time_t timeout) const;
+	void queueMessage(const std::string &message);
+	std::vector<std::string> getPendingMessages();
 };
 
 

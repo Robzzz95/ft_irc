@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/27 12:14:23 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/31 16:13:28 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,6 +24,7 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_authentificated = false;
 	_registered = false;
 	_prefix = "";
+	_last_activity = time(NULL);
 }
 
 Client::~Client()
@@ -122,5 +123,31 @@ std::vector<std::string>	Client::extractLines()
 		_buffer.erase(0, pos + 2);
 	}
 	return (lines);
+}
+
+void Client::updateActivity()
+{
+	_last_activity = time(NULL);
+}
+
+bool Client::isInactive(time_t timeout) const
+{
+	return (time(NULL) - _last_activity) > timeout;
+}
+
+void Client::queueMessage(const std::string &message)
+{
+	_pending_messages.push(message);
+}
+
+std::vector<std::string> Client::getPendingMessages()
+{
+	std::vector<std::string> messages;
+	while (!_pending_messages.empty())
+	{
+		messages.push_back(_pending_messages.front());
+		_pending_messages.pop();
+	}
+	return messages;
 }
 

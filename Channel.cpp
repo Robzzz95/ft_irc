@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 12:39:20 by sacha            ###   ########.fr       */
+/*   Updated: 2025/07/29 12:44:30 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -156,10 +156,6 @@ const std::string &	Channel::getPassword() const
 	return (_password);
 }
 
-bool	Channel::isInviteOnly() const
-{
-	return (_is_invite_only);
-}
 
 bool	Channel::hasLimit() const
 {

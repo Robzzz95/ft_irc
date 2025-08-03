@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 12:38:58 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/03 15:52:48 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -311,52 +311,46 @@ void	Server::passCommand(int fd, std::vector<std::string> vec)
 //notify everyone in the channel of change of nickname
 void	Server::nickCommand(int fd, std::vector<std::string> vec)
 {
-	Client* client = _clients[fd];
+    Client* client = _clients[fd];
 
-	if (!client->getAuthentificated())
-	{
-		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
-		closeConnection(fd);
-		return;
-	}
-	if (vec.size() != 2)
-	{
-		//erreur wrong parameters!
-		return ;
-	}
-	if (!isValidNickname(vec[1]))
-	{
-		sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-		return ;
-	}
-	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
-	{
-		if (it->second->getNickname() == vec[1])
-		{
-			sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
-			return ;
-		}
-	}
-	sendRawMessage(fd, (":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getRealname() + " NICK " + vec[1] + "\r\n"));
-	client->setNickname(vec[1]);
-}
+    if (!client->getAuthentificated())
+    {
+        sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+        closeConnection(fd);
+        return;
+    }
+    if (vec.size() != 2)
+    {
+        //erreur wrong parameters!
+        return ;
+    }
+    if (!isValidNickname(vec[1]))
+    {
+        sendMessageFromServ(fd, 432, "Error: invalid nickname.");
+        return ;
+    }
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+    {
+        if (it->second->getNickname() == vec[1])
+        {
+            sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
+            return ;
+        }
+    }
 
-bool	isValidNickname(const std::string &nickname)
-{
-	if (nickname.empty() || nickname.size() > 9)
-		return (false);
+    std::string oldNickname = client->getNickname();
+    // Changer le nickname avant d'envoyer les notifications
+    client->setNickname(vec[1]);
 
-	char c = nickname[0];
-	if (!isalpha(c) && std::string (" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
-		return (false);
-	for (size_t i = 1; i < nickname.size(); i++)
-	{
-		c = nickname[i];
-		if (!isalnum(c) && std::string(" ,*?!@.:#[]\\`^{}").find(c) == std::string::npos)
-			return (false);
-	}
-	return (true);
+    // Créer le message de changement de nickname avec l'ancien nickname dans le préfixe
+    std::string nickChangeMsg = ":" + oldNickname + "!" + client->getUsername() \
+        + "@" + client->getHostname() + " NICK " + vec[1] + "\r\n";
+
+    // Notifier tous les clients du changement de nickname
+    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+    {
+        sendRawMessage(it->first, nickChangeMsg);
+    }
 }
 
 void	Server::userCommand(int fd, std::vector<std::string> vec)
@@ -601,35 +595,104 @@ void	Server::capCommand(int fd, std::vector<std::string> vec)
 
 void	Server::modeCommand(int fd, std::vector<std::string> vec)
 {
-	Client*	client = _clients[fd];
-	if (vec.size() < 3)
-	{
-		//gerer l'erreur pas assez de parametres
-		return ;
-	}
-	std::string name = vec[1];
-	std::string mode = vec[2];
-	// Channel* channel = getChannelByName(vec[1]);
-	// if (!channel)
-	// {
-	// 	//erreur
-	// 	return ;
-	// }
-	// if (mode == "-o")
-	// {
-	// 	// channel->setPrivileges(vec[3]);
-	// 	return ;
-	// }
-	// else if (mode == "-i")
-	// {
-		
-	// }
-	// if (!name || !mode)
-	// {
-	// 	//gerer l'erreur
-	// }
-	std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + mode;
-	sendRawMessage(fd, msg);
+    Client* client = _clients[fd];
+    if (!client->getRegistered())
+        return sendMessageFromServ(fd, 451, "You have not registered.");
+    
+    if (vec.size() < 2)
+        return sendMessageFromServ(fd, 461, "MODE: Not enough parameters");
+
+    std::string target = vec[1];
+    
+    // Si c'est un canal (commence par #)
+    if (target[0] == '#') {
+        Channel* channel = getChannelByName(target);
+        if (!channel)
+            return sendMessageFromServ(fd, 403, target + " :No such channel");
+            
+        if (!channel->hasClient(fd))
+            return sendMessageFromServ(fd, 442, target + " :You're not on that channel");
+            
+        // Pour voir les modes actuels du canal
+        if (vec.size() == 2) {
+            std::string modes = "+";
+            if (channel->isTopicLocked()) modes += "t";
+            if (channel->hasPassword()) modes += "k";
+            if (channel->hasLimit()) modes += "l";
+            sendMessageFromServ(fd, 324, target + " " + modes);
+            return;
+        }
+        
+        // Pour modifier les modes, il faut être opérateur
+        if (!channel->isOperator(fd))
+            return sendMessageFromServ(fd, 482, target + " :You're not channel operator");
+            
+        std::string modeStr = vec[2];
+        bool adding = (modeStr[0] == '+');
+        bool removing = (modeStr[0] == '-');
+        
+        if (!adding && !removing)
+            return sendMessageFromServ(fd, 472, modeStr + " :is unknown mode char to me");
+            
+        size_t paramIndex = 3;
+        for (size_t i = 1; i < modeStr.length(); i++) {
+            char mode = modeStr[i];
+            switch (mode) {
+                case 't': // Topic restriction
+                    channel->setTopicLocked(adding);
+                    channel->broadcast(":" + client->getPrefix() + " MODE " + target + " " + (adding ? "+t" : "-t") + "\r\n", -1);
+                    break;
+                    
+                case 'k': // Channel key (password)
+                    if (adding && paramIndex < vec.size()) {
+                        channel->setPassword(vec[paramIndex++]);
+                        channel->setHasPassword(true);
+                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " +k " + vec[paramIndex - 1] + "\r\n", -1);
+                    } else if (removing) {
+                        channel->setPassword("");
+                        channel->setHasPassword(false);
+                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " -k\r\n", -1);
+                    }
+                    break;
+                    
+                case 'o': // Channel operator
+                    if (paramIndex < vec.size()) {
+                        Client* target_client = findClientByNickname(vec[paramIndex++]);
+                        if (target_client && channel->hasClient(target_client->getFd())) {
+                            if (adding)
+                                channel->makeOperator(target_client->getFd());
+                            else
+                                channel->removeOperator(target_client->getFd());
+                            channel->broadcast(":" + client->getPrefix() + " MODE " + target + " " + (adding ? "+o" : "-o") + " " + vec[paramIndex - 1] + "\r\n", -1);
+                        }
+                    }
+                    break;
+                    
+                case 'l': // User limit
+                    if (adding && paramIndex < vec.size()) {
+                        int limit = std::atoi(vec[paramIndex++].c_str());
+                        if (limit > 0) {
+                            channel->setLimit(limit);
+                            channel->setHasLimit(true);
+                            channel->broadcast(":" + client->getPrefix() + " MODE " + target + " +l " + vec[paramIndex - 1] + "\r\n", -1);
+                        }
+                    } else if (removing) {
+                        channel->setHasLimit(false);
+                        channel->setLimit(-1);
+                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " -l\r\n", -1);
+                    }
+                    break;
+                    
+                default:
+                    sendMessageFromServ(fd, 472, std::string(1, mode) + " :is unknown mode char to me");
+                    break;
+            }
+        }
+    } else {
+        // Mode pour un utilisateur (non implémenté pour l'instant)
+        std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + vec[2];
+        sendRawMessage(fd, msg);
+    }
 }
 
 //ajouter la gestion de channels
