@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 12:39:04 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/03 17:11:04 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -51,6 +51,7 @@ public:
 	void	closeConnection(int fd);
 	void	ftErrorServ(std::string const & str);
 	void	removeClientFromAllChannels(int fd);
+	void	checkClientTimeouts();
 
 	void	passCommand(int fd, std::vector<std::string> vec);
 	void	nickCommand(int fd, std::vector<std::string> vec);
@@ -60,15 +61,18 @@ public:
 	Client*		findClientByNickname(const std::string &nickname);
 	Channel*	getChannelByName(const std::string &str);
 	void	pingCommand(int fd, std::vector<std::string> vec);
+	void	pongCommand(int fd, std::vector<std::string> vec);
 	void	joinCommand(int fd, std::vector<std::string> vec);
 	void	partCommand(int fd, std::vector<std::string> vec);
-	std::vector<std::string>	splitList(const std::string &str);
 	void	capCommand(int fd, std::vector<std::string> vec);
 	void	modeCommand(int fd, std::vector<std::string> vec);
 	void	whoisCommand(int fd, std::vector<std::string> vec);
 	void	kickCommand(int fd, std::vector<std::string> vec);
 	void	inviteCommand(int fd, std::vector<std::string> vec);
 	void	topicCommand(int fd, std::vector<std::string> vec);
+	void	whoCommand(int fd, std::vector<std::string> vec);
+	void	namesCommand(int fd, std::vector<std::string> vec);
+	void	listCommand(int fd, std::vector<std::string> vec);
 
 };
 

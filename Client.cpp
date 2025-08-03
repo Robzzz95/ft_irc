@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/31 16:13:28 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/03 17:12:16 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -24,7 +24,9 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_authentificated = false;
 	_registered = false;
 	_prefix = "";
-	_last_activity = time(NULL);
+	_last_ping = -1;
+	_last_activity = -1;
+	_awaiting_pong = false;
 }
 
 Client::~Client()
@@ -125,29 +127,39 @@ std::vector<std::string>	Client::extractLines()
 	return (lines);
 }
 
-void Client::updateActivity()
+
+bool	Client::isAwaitingPong() const
+{
+	return (_awaiting_pong);
+}
+
+void	Client::setAwaitingPong(bool value)
+{
+	_awaiting_pong = value;
+}
+
+void	Client::setLastPing(time_t time)
+{
+	_last_ping = time;
+}
+
+void	Client::setLastActivity(time_t time)
+{
+	_last_activity = time;
+}
+
+time_t	Client::getLastPing() const
+{
+	return (_last_ping);
+}
+
+time_t	Client::getLastActivity() const
+{
+	return (_last_activity);
+}
+
+void	Client::updateActivity()
 {
 	_last_activity = time(NULL);
+	_awaiting_pong = false;
 }
-
-bool Client::isInactive(time_t timeout) const
-{
-	return (time(NULL) - _last_activity) > timeout;
-}
-
-void Client::queueMessage(const std::string &message)
-{
-	_pending_messages.push(message);
-}
-
-std::vector<std::string> Client::getPendingMessages()
-{
-	std::vector<std::string> messages;
-	while (!_pending_messages.empty())
-	{
-		messages.push_back(_pending_messages.front());
-		_pending_messages.pop();
-	}
-	return messages;
-}
-

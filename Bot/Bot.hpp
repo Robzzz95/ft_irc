@@ -1,51 +1,55 @@
-#include <iostream>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/types.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <sstream>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <vector>
-#include <poll.h>
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   Bot.hpp                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/29 12:52:07 by sacha             #+#    #+#             */
+/*   Updated: 2025/07/29 12:52:07 by sacha            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+#ifndef BOT_HPP
+#define BOT_HPP
+
+#include <string>
+#include <set>
 #include <map>
-#include <stdlib.h>
-#include <csignal>
-#include <fstream>
-#include <stdbool.h>
-#include "Channel.hpp"
-#include "Client.hpp"
-#include "Server.hpp"
 
-#pragma once
-class Channel;
-class Client;
-class Server;
+struct ParsedMessage {
+    std::string user;
+    std::string command;
+    std::string channel;
+    std::string message;
+};
 
-class Bot : public Server {
-private:
-    std::vector<std::string> _quotes;
-	std::string _ip;
-    std::string _nick;
-    std::string _user;
-    int _serSocketBot;
+class Bot {
+private:    
+    int _socketFd;
+    std::string _serverIp;
+    std::string _serverPort;
+    std::string _password;
+    std::string _nickname;
+    std::string _username;
+    std::string _realname;
+
+    std::set<std::string> _badWords;
+    std::map<std::string, int> _warnings;
+
+    ParsedMessage parseIrcMessage(const std::string& raw);
+    void sendMessage(const std::string& channel, const std::string& message);
+    void kickUser(const std::string& channel, const std::string& user, const std::string& reason);
 
 public:
-    Bot(int port, std::string ip, std::string nick, std::string user, std::string pass) : Server(port, pass), _ip(ip), _nick(nick), _user(user), _serSocketBot(-1) {}
-    ~Bot() {closeConnection();}
+    Bot(const std::string& ip, const std::string& port, const std::string& pass,
+        const std::string& nick, const std::string& user, const std::string& realname);
+    ~Bot();
 
-    void botInit();
-    void loadQuotes(const std::string &filePath);
-    void sendRandomQuote(const std::string &channel);
-    void handleCommand(const std::string &message);
-    void sendMessageToChannel(const std::string &target, const std::string &message);
-    void sendCommand(const std::string &command);
-    void joinServer();
+    bool connectToServer();
+    void loadBadWords(const std::string& filename);
+    void handleServerMessage(const std::string& msg);
     void listenToServer();
-    void closeConnection();
 };
+
+#endif

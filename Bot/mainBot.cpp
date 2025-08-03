@@ -1,56 +1,58 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   mainBot.cpp                                        :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/07/29 15:37:14 by sacha             #+#    #+#             */
+/*   Updated: 2025/07/29 15:37:14 by sacha            ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "Bot.hpp"
-#include "Server.hpp"
+#include <iostream>
+#include <csignal>
 
-Bot* globalBot = NULL;
-volatile bool shouldClose = false;
-
-void Bot::closeConnection() {
-    std::vector<std::string>().swap(_quotes);
-    handleQuit(_serSocketBot,getClientByName(_nick), true);
-}
+Bot* globalBot = nullptr;
 
 void signalHandler(int signal) {
     (void)signal;
     if (globalBot) {
-        std::cout << "Signal received. Cleaning up bot." << std::endl;
-        globalBot->closeConnection();
-        shouldClose = true;
-        exit (0);
+        delete globalBot;
+        globalBot = nullptr;
     }
+    exit(0);
 }
 
 int main(int argc, char** argv) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <ip> <port> <pass>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " <ip> <port> <pass> <nick>" << std::endl;
         return 1;
     }
 
+    signal(SIGINT, signalHandler);
+    signal(SIGTERM, signalHandler);
+
     try {
-        Bot bot(atoi(argv[2]), argv[1], "FiceloBot", "FiceloBot", argv[3]);
-        globalBot = &bot;
+        // Créer le bot avec les paramètres reçus et des valeurs par défaut pour user et realname
+        Bot* bot = new Bot(argv[1], argv[2], argv[3], argv[4], argv[4], "Bot Modérateur");
+        globalBot = bot;
 
-        signal(SIGINT, signalHandler);
-        signal(SIGQUIT, signalHandler);
-        bot.loadQuotes("srcs/Bot/quotes.txt");
-        bot.botInit();
-        bot.listenToServer();
-
-        if (shouldClose) {
-            std::cout << "Shutting down bot gracefully." << std::endl;
+        if (!bot->connectToServer()) {
+            std::cerr << "Erreur de connexion au serveur IRC." << std::endl;
+            delete bot;
+            return 1;
         }
 
+        bot->loadBadWords("Bot/badwords.txt");
+        bot->listenToServer();
+
+        delete bot;
         return 0;
-    } catch (std::exception& e) {
-        std::cerr << e.what() << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Erreur: " << e.what() << std::endl;
         return 1;
     }
 }
-
-/****
- * Bot doit prendre ip, port, pass, nick, user en argument
- * Msg de confirmation de connexion
- * Client = /bot, le bot doit pouvoir rejoindre le channel la ou le client a execute la commande /bot
- * Bot ouvre quotes.txt et envoie une quote aleatoire
- * channel #test : ficelo !quotes bot doit pouvoir sortir une quote dans le channel #test
-*/
-

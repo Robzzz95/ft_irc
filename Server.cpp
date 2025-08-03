@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 15:52:48 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/03 17:09:43 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,22 +61,26 @@ void	Server::initCommands()
 	_commands["QUIT"] = &Server::quitCommand;
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
+	_commands["PONG"] = &Server::pingCommand; //verifier format 
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
-	_commands["WHOIS"] = &Server::whoisCommand;
+	_commands["WHOIS"] = &Server::whoisCommand; //a tesst
 	_commands["PART"] = &Server::partCommand;
-	_commands["KICK"] = &Server::kickCommand;
+	_commands["KICK"] = &Server::kickCommand; //tester
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
-	// _commands[] = &Server:: ;
-
+	_commands["WHO"] = &Server::whoCommand; //test 
+	_commands["NAMES"] = &Server::namesCommand; //a corriger
+	// _commands["NOTICE"] = &Server::noticeCommand;
+	_commands["LIST"] = &Server::listCommand; //test
 }
 
 void	Server::initServ()
 {
 	setupSocket();
 	initCommands();
+	time_t lastTimeoutCheck = time(NULL);
 	while (g_running)
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
@@ -96,6 +100,12 @@ void	Server::initServ()
 				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
 					handleClient(_poll_fds[i].fd);
 			}
+		}
+		time_t now = time(NULL);
+		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
+		{
+			checkClientTimeouts();
+			lastTimeoutCheck = now;
 		}
 	}
 }
@@ -127,7 +137,12 @@ void	Server::setupSocket()
 	pfd.events = POLLIN;
 	pfd.revents = 0;
 	_poll_fds.push_back(pfd);
-	std::cout << GREEN << "SERVER LISTENING ON PORT " << RESET << _port << std::endl;
+
+	char	hostname[256];
+	gethostname(hostname, sizeof(hostname));
+	struct hostent* host = gethostbyname(hostname);
+	struct in_addr** addr_list = (struct in_addr**)host->h_addr_list;
+	std::cout << GREEN << "SERVER LISTENING ON " << RESET << inet_ntoa(*addr_list[0]) << ":" <<  _port << std::endl;
 }
 
 void	Server::acceptClient()
@@ -167,7 +182,7 @@ void	Server::handleClient(int fd)
 	ssize_t bytes_read = recv(fd, buffer, BUFFER_SIZE - 1, 0);
 	if (bytes_read <= 0)
 	{
-		if (bytes_read == 0 || (bytes_read < 0 && errno != EWOULDBLOCK && errno != EAGAIN))
+		if (bytes_read == 0)
 		{
 			std::cout << "Client on FD " << fd << " disconnected." << std::endl;
 
@@ -189,6 +204,7 @@ void	Server::handleClient(int fd)
 	std::cout << "FROM CLIENT: " << buffer << std::endl;
 
 	Client *client = _clients[fd];
+	client->updateActivity();
 	client->appendToBuffer(std::string(buffer, bytes_read));
 	std::vector<std::string> lines = client->extractLines();
 	for (size_t i = 0; i < lines.size(); i++)
@@ -210,6 +226,7 @@ int	Server::processCommand(int fd, const std::string &line)
 		commandHandler	handler = it->second;
 		(this->*handler)(fd, vec);
 		
+		//rajouter une meilleure gestion de commandes non existantes
 		if (_clients.find(fd) == _clients.end())
 			return (1);
 	}
@@ -253,15 +270,11 @@ void	Server::removeClientFromAllChannels(int fd)
 		Channel* channel = it->second;
 		if (channel->hasClient(fd))
 		{
-			channel->removeClient(fd);
-			
-			//!!broadcast about leaving to other clients in channel!!!
-			
-			//std::string partingMsg = : + _clients[fd]->getPrefix + " PART " + channel->getName() + \r\n;
-			//channel->broadcast(partingMsg);
+			channel->removeClient(fd);			
+			std::string partingMsg = ":" + _clients[fd]->getPrefix() + " PART " + channel->getName() + "\r\n";
+			channel->broadcast(partingMsg, fd);
 		}
 	}
-	
 }
 
 void	Server::closeConnection(int fd)
@@ -313,45 +326,27 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 {
     Client* client = _clients[fd];
 
-    if (!client->getAuthentificated())
-    {
-        sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
-        closeConnection(fd);
-        return;
-    }
-    if (vec.size() != 2)
-    {
-        //erreur wrong parameters!
-        return ;
-    }
-    if (!isValidNickname(vec[1]))
-    {
-        sendMessageFromServ(fd, 432, "Error: invalid nickname.");
-        return ;
-    }
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
-    {
-        if (it->second->getNickname() == vec[1])
-        {
-            sendMessageFromServ(fd, 433, "Error 433: nickname already in use.");
-            return ;
-        }
-    }
-
-    std::string oldNickname = client->getNickname();
-    // Changer le nickname avant d'envoyer les notifications
-    client->setNickname(vec[1]);
-
-    // Créer le message de changement de nickname avec l'ancien nickname dans le préfixe
-    std::string nickChangeMsg = ":" + oldNickname + "!" + client->getUsername() \
-        + "@" + client->getHostname() + " NICK " + vec[1] + "\r\n";
-
-    // Notifier tous les clients du changement de nickname
-    for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
-    {
-        sendRawMessage(it->first, nickChangeMsg);
-    }
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
+	if (vec.size() != 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 464, "Error: NICK wrong parameters");
+	if (!isValidNickname(vec[1]))
+		return sendMessageFromServ(fd, 432, "Error: invalid nickname.");
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		if (it->first != fd && it->second->getNickname() == vec[1])
+			return sendMessageFromServ(fd, 433, "Nickname already in use."), closeConnection(fd);
+	}
+	sendRawMessage(fd, (client->getPrefix() + " NICK :" + vec[1] + "\r\n"));
+	client->setNickname(vec[1]);
+	//notifier tous les channels
 }
+
+
 
 void	Server::userCommand(int fd, std::vector<std::string> vec)
 {
@@ -366,14 +361,20 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 
 	if (vec.size() < 5)
 	{
-		sendMessageFromServ(fd, 0, "Error: invalid USER command format.");//a corriger
+		sendMessageFromServ(fd, 461, "USER :Not enough parameters.");
 		return ;
 	}
 	std::string username = vec[1];
-	std::string realname = vec[4]; 
+	std::string realname;
+	for (size_t i = 4; i < vec.size(); i++)
+	{
+		if (!realname.empty())
+			realname += " ";
+		realname += vec[i];
+	} 
 	if (username.empty() || realname.empty())
 	{
-		sendMessageFromServ(fd, 0, "Error: invalid USER command format.");//a corriger
+		sendMessageFromServ(fd, 461, "USER :Invalid username or realname.");
 		return ;
 	}
 	size_t i = 0;
@@ -387,8 +388,6 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is " + _name + " , running version v1.0");
 	sendMessageFromServ(fd, 003, client->getNickname() + " :This server was created Mon Jun 10 2025 at 13:45:00");
 	sendMessageFromServ(fd, 004, _name + " v1.0 o o");
-	// sendMessageFromServ(fd, 005, client->getNickname() + "CHANTYPES=# PREFIX=(o)@ CHANMODES=o");
-	// sendMessageFromServ(fd, 376, "End of /MOTD command.");
 }
 
 void	Server::quitCommand(int fd, std::vector<std::string> vec)
@@ -417,7 +416,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	if (vec.size() < 2)
 		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
 	
-	std::string command, recipient, message;
+	std::string	recipient, message;
 	recipient = vec[1];
 	for (size_t i = 2; i < vec.size(); i++)
 	{
@@ -441,9 +440,9 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 		return ;
 	}
 	//private message 
-	Client*target = findClientByNickname(recipient);
+	Client*	target = findClientByNickname(recipient);
 	if (!target)
-		return sendMessageFromServ(fd, 401, recipient + " : no such nick.");
+		return sendMessageFromServ(fd, 401, recipient + " :No such nick.");
 	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
@@ -468,49 +467,106 @@ Channel*	Server::getChannelByName(const std::string &str)
 	return (NULL);
 }
 
+void	Server::pongCommand(int fd, std::vector<std::string> vec)
+{
+	(void)vec;
+	Client* client = _clients[fd];
+	client->updateActivity();
+}
 
 void	Server::pingCommand(int fd, std::vector<std::string> vec)
 {
-	// if (vec.size() < 2)
-	// {
-	// 	sendRawMessage(fd, ":PONG " + _name + "\r\n");
-	// 	return ;
-	// }
-	// sendRawMessage(fd, ":PONG " + vec[1] + "\r\n");
-
+	Client*	client = _clients[fd];
 	std::string token = (vec.size() >= 2) ? vec[1] : _name;
+	client->setLastActivity(time(NULL));
 	sendRawMessage(fd, ":" + _name + " PONG :" + token + "\r\n");
 }
 
-void	Server::joinCommand(int fd, std::vector<std::string> vec)
+void	Server::checkClientTimeouts()
 {
-	Client*	client = _clients[fd];
+	time_t now = time(NULL);
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
+	{
+		Client*	client = it->second;
+		if (client->isAwaitingPong())
+		{
+			if (now - client->getLastPing() > PING_TIMEOUT)
+			{
+				sendRawMessage(client->getFd(), "ERROR :Ping timeout\r\n");
+				closeConnection(client->getFd());
+			}
+		}
+		else if (now - client->getLastActivity() > PING_CHECK)
+		{
+			std::stringstream ss;
+			ss << "PING :" << now << "\r\n";
+			client->setLastPing(now);
+			client->setAwaitingPong(true);
+			sendRawMessage(client->getFd(), ss.str());
+		}
+	}
+}
+
+void Server::joinCommand(int fd, std::vector<std::string> vec)
+{
+	Client* client = _clients[fd];
 	if (!client->getRegistered())
 		return sendMessageFromServ(fd, 451, "you must register first.");
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
-	std::vector<std::string>	channels = splitList(vec[1]);
+	std::vector<std::string> channels = splitList(vec[1]);
+	std::string key = (vec.size() >= 3 ? vec[2] : "");
 
 	for (size_t i = 0; i < channels.size(); i++)
 	{
-		std::string &channel_name = channels[i];	
+		std::string &channel_name = channels[i];
 		if (channel_name.empty() || channel_name[0] != '#')
 			return sendMessageFromServ(fd, 476, "Invalid channel name.");
+		Channel* new_channel;
 		if (_channels.find(channel_name) == _channels.end())
 		{
-			Channel*	new_channel = new Channel(channel_name);
-			new_channel->addClient(fd, client);
+			new_channel = new Channel(channel_name);
 			_channels[channel_name] = new_channel;
-		}
+        }
 		else
-			_channels[channel_name]->addClient(fd, client);
-		std::string message = ":" + client->getNickname() + "!" + client->getUsername() \
-		+ "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
-		_channels[channel_name]->broadcast(message, 0);
+			new_channel = _channels[channel_name];
+		
+		if (new_channel->isInviteOnly() && !new_channel->isInvited(fd))
+		{
+			sendMessageFromServ(fd, 473, channel_name + " :Cannot join channel (+i)");
+			continue ;
+		}
+		if (new_channel->hasLimit() && static_cast<int>(new_channel->getClientList().size()) >= new_channel->getLimit())
+    	{
+			sendMessageFromServ(fd, 471, channel_name + " :Cannot join channel (+l)");
+			continue ;
+		}	
+        if (new_channel->hasPassword() && key != new_channel->getPassword())
+		{
+			sendMessageFromServ(fd, 475, " :Cannot join channel (+k)");
+			continue ;
+		}
+		_channels[channel_name]->addClient(fd, client);
+
+		std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
+		_channels[channel_name]->broadcast(message, -1);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+
+		Channel* channel = _channels[channel_name];
+		std::string names;
+		std::vector<Client*> clients = channel->getClientList();
+		for (size_t j = 0; j < clients.size(); ++j)
+		{
+			if (channel->isOperator(clients[j]->getFd()))
+				names += "@";
+			names += clients[j]->getNickname();
+				if (j + 1 < clients.size())
+				names += " ";
+		}
+		sendMessageFromServ(fd, 353, client->getNickname() + " = " + channel_name + " :" + names);
+		sendMessageFromServ(fd, 366, client->getNickname() + " " + channel_name + " :End of NAMES list");
 	}
 }
-
 
 //ajouter la raison du depart
 void	Server::partCommand(int fd, std::vector<std::string> vec)
@@ -554,26 +610,7 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 	}
 }
 
-std::vector<std::string>	Server::splitList(const std::string &str)
-{
-	std::vector<std::string>	dest;
-	std::string	tmp;
 
-	for (size_t i = 0; i < str.length(); i++)
-	{
-		if (str[i] == ',')
-		{
-			if (!tmp.empty())
-				dest.push_back(tmp);
-			tmp.clear();
-		}
-		else
-			tmp += str[i];
-	}
-	if (!tmp.empty())
-		dest.push_back(tmp);	
-	return (dest);
-}
 
 void	Server::capCommand(int fd, std::vector<std::string> vec)
 {
@@ -595,112 +632,43 @@ void	Server::capCommand(int fd, std::vector<std::string> vec)
 
 void	Server::modeCommand(int fd, std::vector<std::string> vec)
 {
-    Client* client = _clients[fd];
-    if (!client->getRegistered())
-        return sendMessageFromServ(fd, 451, "You have not registered.");
-    
-    if (vec.size() < 2)
-        return sendMessageFromServ(fd, 461, "MODE: Not enough parameters");
-
-    std::string target = vec[1];
-    
-    // Si c'est un canal (commence par #)
-    if (target[0] == '#') {
-        Channel* channel = getChannelByName(target);
-        if (!channel)
-            return sendMessageFromServ(fd, 403, target + " :No such channel");
-            
-        if (!channel->hasClient(fd))
-            return sendMessageFromServ(fd, 442, target + " :You're not on that channel");
-            
-        // Pour voir les modes actuels du canal
-        if (vec.size() == 2) {
-            std::string modes = "+";
-            if (channel->isTopicLocked()) modes += "t";
-            if (channel->hasPassword()) modes += "k";
-            if (channel->hasLimit()) modes += "l";
-            sendMessageFromServ(fd, 324, target + " " + modes);
-            return;
-        }
-        
-        // Pour modifier les modes, il faut être opérateur
-        if (!channel->isOperator(fd))
-            return sendMessageFromServ(fd, 482, target + " :You're not channel operator");
-            
-        std::string modeStr = vec[2];
-        bool adding = (modeStr[0] == '+');
-        bool removing = (modeStr[0] == '-');
-        
-        if (!adding && !removing)
-            return sendMessageFromServ(fd, 472, modeStr + " :is unknown mode char to me");
-            
-        size_t paramIndex = 3;
-        for (size_t i = 1; i < modeStr.length(); i++) {
-            char mode = modeStr[i];
-            switch (mode) {
-                case 't': // Topic restriction
-                    channel->setTopicLocked(adding);
-                    channel->broadcast(":" + client->getPrefix() + " MODE " + target + " " + (adding ? "+t" : "-t") + "\r\n", -1);
-                    break;
-                    
-                case 'k': // Channel key (password)
-                    if (adding && paramIndex < vec.size()) {
-                        channel->setPassword(vec[paramIndex++]);
-                        channel->setHasPassword(true);
-                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " +k " + vec[paramIndex - 1] + "\r\n", -1);
-                    } else if (removing) {
-                        channel->setPassword("");
-                        channel->setHasPassword(false);
-                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " -k\r\n", -1);
-                    }
-                    break;
-                    
-                case 'o': // Channel operator
-                    if (paramIndex < vec.size()) {
-                        Client* target_client = findClientByNickname(vec[paramIndex++]);
-                        if (target_client && channel->hasClient(target_client->getFd())) {
-                            if (adding)
-                                channel->makeOperator(target_client->getFd());
-                            else
-                                channel->removeOperator(target_client->getFd());
-                            channel->broadcast(":" + client->getPrefix() + " MODE " + target + " " + (adding ? "+o" : "-o") + " " + vec[paramIndex - 1] + "\r\n", -1);
-                        }
-                    }
-                    break;
-                    
-                case 'l': // User limit
-                    if (adding && paramIndex < vec.size()) {
-                        int limit = std::atoi(vec[paramIndex++].c_str());
-                        if (limit > 0) {
-                            channel->setLimit(limit);
-                            channel->setHasLimit(true);
-                            channel->broadcast(":" + client->getPrefix() + " MODE " + target + " +l " + vec[paramIndex - 1] + "\r\n", -1);
-                        }
-                    } else if (removing) {
-                        channel->setHasLimit(false);
-                        channel->setLimit(-1);
-                        channel->broadcast(":" + client->getPrefix() + " MODE " + target + " -l\r\n", -1);
-                    }
-                    break;
-                    
-                default:
-                    sendMessageFromServ(fd, 472, std::string(1, mode) + " :is unknown mode char to me");
-                    break;
-            }
-        }
-    } else {
-        // Mode pour un utilisateur (non implémenté pour l'instant)
-        std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + vec[2];
-        sendRawMessage(fd, msg);
-    }
+	Client*	client = _clients[fd];
+	if (vec.size() < 3)
+	{
+		//gerer l'erreur pas assez de parametres
+		return ;
+	}
+	std::string name = vec[1];
+	std::string mode = vec[2];
+	// Channel* channel = getChannelByName(vec[1]);
+	// if (!channel)
+	// {
+	// 	//erreur
+	// 	return ;
+	// }
+	// if (mode == "-o")
+	// {
+	// 	// channel->setPrivileges(vec[3]);
+	// 	return ;
+	// }
+	// else if (mode == "-i")
+	// {
+		
+	// }
+	// if (!name || !mode)
+	// {
+	// 	//gerer l'erreur
+	// }
+	std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + mode;
+	sendRawMessage(fd, msg);
 }
 
-//ajouter la gestion de channels
 void	Server::whoisCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, " PART Need more parameters");
 	std::string name = vec[1];
-
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (name == it->second->getNickname())
@@ -751,7 +719,6 @@ void	Server::topicCommand(int fd, std::vector<std::string> vec)
 	channel->setTopic(new_topic);
 	std::string msg = client->getPrefix() + " TOPIC " + channel_name + " :" + new_topic + "\r\n";
 	channel->broadcast(msg, -1);
-	// sendRawMessage(fd, msg);
 }
 
 void	Server::kickCommand(int fd, std::vector<std::string> vec)
@@ -799,7 +766,7 @@ void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 	if (vec.size() < 2)
-		return sendMessageFromServ(fd, 461, "INVITE : Not enough parameters");
+		return sendMessageFromServ(fd, 461, "INVITE :Not enough parameters");
 	Client*	target = findClientByNickname(vec[1]);
 	if (!target)
 		return sendMessageFromServ(fd, 401, vec[1] + " :No such nick");
@@ -816,4 +783,173 @@ void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 	channel->addInvited(target->getFd());
 	sendRawMessage(target->getFd(), msg + "\r\n");
 	sendMessageFromServ(fd, 341, vec[1] + " " + vec[2]);
+}
+
+void	Server::whoCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	requester = _clients[fd];
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "WHO :Not enough parameters");
+	std::string target = vec[1];
+
+	//channels
+	if (target[0] == '#')
+	{
+		Channel* channel = getChannelByName(target);
+		if (!channel)
+			return sendMessageFromServ(fd, 403, target + " :No such channel");
+		std::vector<Client*> client_list = channel->getClientList();
+		for (size_t i = 0; i < client_list.size(); i++)
+		{
+			Client* client = client_list[i];
+			std::string status = channel->isOperator(client->getFd()) ? "@" : "";
+			std::string msg = ":" + _name + " 352 " + requester->getNickname() + " " + \
+				target + " " + client->getUsername() + " " + client->getHostname() + " " + _name + \
+				" " +  client->getNickname() + " H " + status + " :0 " + client->getRealname() + "\r\n";
+			sendRawMessage(fd, msg);
+		}
+		std::string end_msg = ":" + _name + " 315 " + requester->getNickname() + " " + target + " :End of WHO list\r\n";
+		return sendRawMessage(fd, end_msg);
+	}
+
+	//users
+	Client*	user = findClientByNickname(target);
+	if (user)
+	{
+		std::string status = "H";
+		std::string channelName = "*";
+		for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+		{
+			if (it->second->hasClient(user->getFd()))
+			{
+				channelName = it->first;
+				if (it->second->isOperator(user->getFd()))
+					status += "@";
+				break;
+			}
+		}
+		std::string reply = ":" + _name + " 352 " + requester->getNickname() + " " + \
+			channelName + " " + user->getUsername() + " " + user->getHostname() + " " + \
+			_name + " " + user->getNickname() + " " + status + " :0 " + user->getRealname() + "\r\n";
+		sendRawMessage(fd, reply);
+		std::string endMsg = ":" + _name + " 315 " + requester->getNickname() + " " + target + " :End of WHO list\r\n";
+		return sendRawMessage(fd, endMsg);
+	}
+	
+	//all users
+	// if (target == "*")
+	// {
+	// 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
+	// 	{
+	// 		Client* c = it->second;
+	// 		std::string status = "H";
+	// 		std::string channelName = "*";
+	// 		for (std::map<std::string, Channel*>::iterator ch = _channels.begin(); ch != _channels.end(); ++ch)
+	// 		{
+	// 			if (ch->second->hasClient(c->getFd()))
+	// 			{
+	// 				channelName = ch->first;
+	// 				if (ch->second->isOperator(c->getFd()))
+	// 					status += "@";
+	// 				break;
+	// 			}
+	// 		}
+	// 		std::string reply = ":" + _name + " 352 " + requester->getNickname() + " " +
+	// 			channelName + " " + c->getUsername() + " " + c->getHostname() + " " +
+	// 			_name + " " + c->getNickname() + " " + status + " :0 " + c->getRealname() + "\r\n";
+	// 		sendRawMessage(fd, reply);
+	// 	}
+	// 	std::string endMsg = ":" + _name + " 315 " + requester->getNickname() + " * :End of WHO list\r\n";
+	// 	return sendRawMessage(fd, endMsg);
+	// }
+
+	//if nothing matches
+	return sendMessageFromServ(fd, 403, target + " :No such nick/channel");
+}
+
+void	Server::namesCommand(int fd, std::vector<std::string> vec)
+{
+	Client* client = _clients[fd];
+	if (vec.size() < 2 || vec[1].empty())
+	{
+		for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
+		{
+			Channel* channel = it->second;
+			std::string channel_name = it->first;
+			std::string names;
+			std::vector<Client*> clients = channel->getClientList();
+			for (size_t i = 0; i < clients.size(); i++)
+			{
+				if (channel->isOperator(clients[i]->getFd()))
+					names += '@';
+				names += clients[i]->getNickname();
+				if (i + 1 < clients.size())
+					names += " ";
+			}
+			std::cerr << names << std::endl;
+			sendMessageFromServ(fd, 353, client->getNickname() + " = " + channel_name + " :" + names);
+			sendMessageFromServ(fd, 366, client->getNickname() + " " + channel_name + " :End of NAMES list");
+		}
+		return ;
+	}
+	std::vector<std::string> names_list = splitList(vec[1]);
+	for (size_t i = 0; i < names_list.size(); ++i)
+	{
+		std::string channel_name = names_list[i];
+		Channel* channel = getChannelByName(channel_name);
+		if (!channel)
+			continue ;
+		std::string names;
+		std::vector<Client*> clients = channel->getClientList();
+		for (size_t j = 0; j < clients.size(); ++j)
+		{
+			if (channel->isOperator(clients[j]->getFd()))
+				names += "@";
+			names += clients[j]->getNickname();
+			if (j + 1 < clients.size())
+				names += " ";
+		}
+		std::cerr << names << std::endl;
+		sendMessageFromServ(fd, 353, client->getNickname() +  " = " + channel_name + " :" + names);
+		sendMessageFromServ(fd, 366, client->getNickname() + " " + channel_name + " :End of NAMES list");
+	}
+}
+
+void	Server::listCommand(int fd, std::vector<std::string> vec)
+{
+	Client* client = _clients[fd];
+	std::string nick = client->getNickname();
+
+	sendMessageFromServ(fd, 321, "Channel :Users Name"); // Start of list
+
+	if (vec.size() < 2)
+	{
+		for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it)
+		{
+			Channel* channel = it->second;
+			std::string name = it->first;
+			std::string topic = channel->getTopic();
+			size_t userCount = channel->getClientList().size();
+			std::stringstream oss;
+			oss << name << " " << userCount << " :" << topic;
+			sendMessageFromServ(fd, 322, oss.str());
+		}
+	}
+	else
+	{
+		std::vector<std::string> list = splitList(vec[1]);
+		for (size_t i = 0; i < list.size(); ++i)
+		{
+			std::string channel_name = list[i];
+			Channel* channel = getChannelByName(channel_name);
+			if (!channel)
+				continue;
+			std::string topic = channel->getTopic();
+			size_t userCount = channel->getClientList().size();
+			std::stringstream oss;
+			oss << channel_name << " " << userCount << " :" << topic;
+			sendMessageFromServ(fd, 322, oss.str());
+		}
+	}
+	sendMessageFromServ(fd, 323, ":End of LIST");
 }
