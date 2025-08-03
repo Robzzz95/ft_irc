@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/30 16:32:51 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/03 16:20:31 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,11 +46,8 @@ int	main(int ac, char **av)
 
 /*
 to do list:
-operators handling with all the MODE commands
 get the modes for channels
-get ctrl+Z to work properly
 some inputs outputs should get done properly, might have issues so far 
 add missing commands
-join and invite add limit to channels
-join should check for restricted channels and check for _invited_clients
+nick change shouldnt disconnect
 */

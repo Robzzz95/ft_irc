@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 15:50:55 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/03 16:24:00 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -56,24 +56,24 @@ void	Server::initCommands()
 {
 	_commands["PASS"] = &Server::passCommand;
 	_commands["NICK"] = &Server::nickCommand;
-	_commands["USER"] = &Server::userCommand; //a corriger
+	_commands["USER"] = &Server::userCommand;
 	_commands["PRIVMSG"] = &Server::privmsgCommand;
 	_commands["QUIT"] = &Server::quitCommand;
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
-	_commands["PONG"] = &Server::pingCommand;
+	_commands["PONG"] = &Server::pingCommand; //verifier format 
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
-	_commands["WHOIS"] = &Server::whoisCommand;
+	_commands["WHOIS"] = &Server::whoisCommand; //a tesst
 	_commands["PART"] = &Server::partCommand;
-	_commands["KICK"] = &Server::kickCommand;
+	_commands["KICK"] = &Server::kickCommand; //tester
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
-	_commands["WHO"] = &Server::whoCommand;
+	_commands["WHO"] = &Server::whoCommand; //test 
 	_commands["NAMES"] = &Server::namesCommand; //a corriger
 	// _commands["NOTICE"] = &Server::noticeCommand;
-	_commands["LIST"] = &Server::listCommand;
+	_commands["LIST"] = &Server::listCommand; //test
 }
 
 void	Server::initServ()
@@ -182,7 +182,7 @@ void	Server::handleClient(int fd)
 	ssize_t bytes_read = recv(fd, buffer, BUFFER_SIZE - 1, 0);
 	if (bytes_read <= 0)
 	{
-		if (bytes_read == 0 || (bytes_read < 0 && errno != EWOULDBLOCK && errno != EAGAIN))
+		if (bytes_read == 0)
 		{
 			std::cout << "Client on FD " << fd << " disconnected." << std::endl;
 
@@ -507,26 +507,26 @@ void	Server::checkClientTimeouts()
 
 void Server::joinCommand(int fd, std::vector<std::string> vec)
 {
-    Client* client = _clients[fd];
-    if (!client->getRegistered())
-        return sendMessageFromServ(fd, 451, "you must register first.");
-    if (vec.size() < 2 || vec[1].empty())
-        return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
-    std::vector<std::string> channels = splitList(vec[1]);
+	Client* client = _clients[fd];
+	if (!client->getRegistered())
+		return sendMessageFromServ(fd, 451, "you must register first.");
+	if (vec.size() < 2 || vec[1].empty())
+		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
+	std::vector<std::string> channels = splitList(vec[1]);
 	std::string key = (vec.size() >= 3 ? vec[2] : "");
 
-    for (size_t i = 0; i < channels.size(); i++)
-    {
-        std::string &channel_name = channels[i];
-        if (channel_name.empty() || channel_name[0] != '#')
-            return sendMessageFromServ(fd, 476, "Invalid channel name.");
+	for (size_t i = 0; i < channels.size(); i++)
+	{
+		std::string &channel_name = channels[i];
+		if (channel_name.empty() || channel_name[0] != '#')
+			return sendMessageFromServ(fd, 476, "Invalid channel name.");
 		Channel* new_channel;
-        if (_channels.find(channel_name) == _channels.end())
-        {
-            new_channel = new Channel(channel_name);
-            _channels[channel_name] = new_channel;
+		if (_channels.find(channel_name) == _channels.end())
+		{
+			new_channel = new Channel(channel_name);
+			_channels[channel_name] = new_channel;
         }
-        else
+		else
 			new_channel = _channels[channel_name];
 		
 		if (new_channel->isInviteOnly() && !new_channel->isInvited(fd))
@@ -546,24 +546,24 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		}
 		_channels[channel_name]->addClient(fd, client);
 
-        std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
-        _channels[channel_name]->broadcast(message, -1);
-        sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+		std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
+		_channels[channel_name]->broadcast(message, -1);
+		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
 
-	    Channel* channel = _channels[channel_name];
-        std::string names;
-        std::vector<Client*> clients = channel->getClientList();
-        for (size_t j = 0; j < clients.size(); ++j)
-        {
-            if (channel->isOperator(clients[j]->getFd()))
-                names += "@";
-            names += clients[j]->getNickname();
-            if (j + 1 < clients.size())
-                names += " ";
-        }
-        sendMessageFromServ(fd, 353, client->getNickname() + " = " + channel_name + " :" + names);
-        sendMessageFromServ(fd, 366, client->getNickname() + " " + channel_name + " :End of NAMES list");
-    }
+		Channel* channel = _channels[channel_name];
+		std::string names;
+		std::vector<Client*> clients = channel->getClientList();
+		for (size_t j = 0; j < clients.size(); ++j)
+		{
+			if (channel->isOperator(clients[j]->getFd()))
+				names += "@";
+			names += clients[j]->getNickname();
+				if (j + 1 < clients.size())
+				names += " ";
+		}
+		sendMessageFromServ(fd, 353, client->getNickname() + " = " + channel_name + " :" + names);
+		sendMessageFromServ(fd, 366, client->getNickname() + " " + channel_name + " :End of NAMES list");
+	}
 }
 
 //ajouter la raison du depart
