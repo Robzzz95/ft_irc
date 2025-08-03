@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 16:20:31 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/03 18:48:20 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,12 +42,3 @@ int	main(int ac, char **av)
 	serv.initServ();
 	return (0);
 }
-
-
-/*
-to do list:
-get the modes for channels
-some inputs outputs should get done properly, might have issues so far 
-add missing commands
-nick change shouldnt disconnect
-*/
