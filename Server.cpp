@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 15:38:50 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/03 15:50:55 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -62,16 +62,16 @@ void	Server::initCommands()
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
 	_commands["PONG"] = &Server::pingCommand;
-	_commands["JOIN"] = &Server::joinCommand; //limite + les invitations
+	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand;
-	_commands["WHOIS"] = &Server::whoisCommand; //??
+	_commands["WHOIS"] = &Server::whoisCommand;
 	_commands["PART"] = &Server::partCommand;
 	_commands["KICK"] = &Server::kickCommand;
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
 	_commands["WHO"] = &Server::whoCommand;
-	_commands["NAMES"] = &Server::namesCommand;
+	_commands["NAMES"] = &Server::namesCommand; //a corriger
 	// _commands["NOTICE"] = &Server::noticeCommand;
 	_commands["LIST"] = &Server::listCommand;
 }
