@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/28 12:14:47 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/30 15:10:31 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,4 +69,25 @@ bool	isValidNickname(const std::string &nickname)
 			return (false);
 	}
 	return (true);
+}
+
+std::vector<std::string>	splitList(const std::string &str)
+{
+	std::vector<std::string>	dest;
+	std::string	tmp;
+
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		if (str[i] == ',')
+		{
+			if (!tmp.empty())
+				dest.push_back(tmp);
+			tmp.clear();
+		}
+		else
+			tmp += str[i];
+	}
+	if (!tmp.empty())
+		dest.push_back(tmp);	
+	return (dest);
 }

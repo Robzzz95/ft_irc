@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 16:51:43 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/03 13:10:29 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -64,13 +64,15 @@ public:
 	void	pongCommand(int fd, std::vector<std::string> vec);
 	void	joinCommand(int fd, std::vector<std::string> vec);
 	void	partCommand(int fd, std::vector<std::string> vec);
-	std::vector<std::string>	splitList(const std::string &str);
 	void	capCommand(int fd, std::vector<std::string> vec);
 	void	modeCommand(int fd, std::vector<std::string> vec);
 	void	whoisCommand(int fd, std::vector<std::string> vec);
 	void	kickCommand(int fd, std::vector<std::string> vec);
 	void	inviteCommand(int fd, std::vector<std::string> vec);
 	void	topicCommand(int fd, std::vector<std::string> vec);
+	void	whoCommand(int fd, std::vector<std::string> vec);
+	void	namesCommand(int fd, std::vector<std::string> vec);
+	void	listCommand(int fd, std::vector<std::string> vec);
 
 };
 

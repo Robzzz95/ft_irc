@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 15:41:34 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/30 15:10:38 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,5 +48,6 @@ void	arg_error(std::string const & str);
 extern	bool	g_running;
 std::vector<std::string> splitIrc(const std::string & line);
 bool	isValidNickname(const std::string &nickname);
+std::vector<std::string>	splitList(const std::string &str);
 
 #endif
