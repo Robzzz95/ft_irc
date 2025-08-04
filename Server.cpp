@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 16:48:46 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 16:51:49 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -636,40 +636,110 @@ void	Server::capCommand(int fd, std::vector<std::string> vec)
 		return ;
 }
 
-void	Server::modeCommand(int fd, std::vector<std::string> vec)
+void Server::modeCommand(int fd, std::vector<std::string> vec)
 {
-	(void)fd;
-	// Client*	client = _clients[fd];
-	if (vec.size() < 3)
-	{
-		//gerer l'erreur pas assez de parametres
-		return ;
-	}
-	std::string name = vec[1];
-	std::string mode = vec[2];
-	// Channel* channel = getChannelByName(vec[1]);
-	// if (!channel)
-	// {
-	// 	//erreur
-	// 	return ;
-	// }
-	// if (mode == "-o")
-	// {
-	// 	// channel->setPrivileges(vec[3]);
-	// 	return ;
-	// }
-	// else if (mode == "-i")
-	// {
-		
-	// }
-	// if (!name || !mode)
-	// {
-	// 	//gerer l'erreur
-	// }
-	if (mode == "+i")
-		return /*sendMessageFromServ(fd, 501, ":Unknown or unsupported mode")*/;
-	// std::string msg = client->getPrefix() + " MODE " + client->getNickname() + " " + mode + "\r\n";
-	// sendRawMessage(fd, msg);
+    Client* client = _clients[fd];
+    if (vec.size() < 2) {
+        sendMessageFromServ(fd, 461, "MODE :Not enough parameters");
+        return;
+    }
+
+    std::string channelName = vec[1];
+    Channel* channel = getChannelByName(channelName);
+    if (!channel) {
+        sendMessageFromServ(fd, 403, channelName + " :No such channel");
+        return;
+    }
+
+    // Si seulement le nom du channel est donné, on affiche les modes actuels
+    if (vec.size() == 2) {
+        std::string modes = "+";
+        std::string params;
+		std::stringstream oss;
+		oss << channel->getLimit();
+
+        if (channel->isInviteOnly()) modes += "i";
+        if (channel->isTopicLocked()) modes += "t";
+        if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
+        // if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
+		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
+        sendMessageFromServ(fd, 324, channelName + " " + modes + params);
+        return;
+    }
+
+    // Seul un opérateur peut changer les modes
+    if (!channel->isOperator(fd)) {
+        sendMessageFromServ(fd, 482, channelName + " :You're not channel operator");
+        return;
+    }
+
+    std::string modeString = vec[2];
+    size_t paramIndex = 3;
+    bool adding = true;
+    std::string modeChanges = ":" + client->getPrefix() + " MODE " + channelName + " " + modeString;
+
+    for (size_t i = 0; i < modeString.length(); ++i) {
+        char modeChar = modeString[i];
+        if (modeChar == '+') adding = true;
+        else if (modeChar == '-') adding = false;
+        else if (modeChar == 'i') channel->setInviteOnly(adding);
+        else if (modeChar == 't') channel->setTopicLocked(adding);
+        else if (modeChar == 'k') {
+            if (adding) {
+                if (vec.size() <= paramIndex) {
+                    sendMessageFromServ(fd, 461, "MODE :Not enough parameters for +k");
+                    return;
+                }
+                channel->setPassword(vec[paramIndex]);
+                channel->setHasPassword(true);
+                paramIndex++;
+            } else {
+                channel->setHasPassword(false);
+                channel->setPassword("");
+            }
+        }
+        else if (modeChar == 'l') {
+            if (adding) {
+                if (vec.size() <= paramIndex) {
+                    sendMessageFromServ(fd, 461, "MODE :Not enough parameters for +l");
+                    return;
+                }
+                int limit = std::atoi(vec[paramIndex].c_str());
+                channel->setLimit(limit);
+                channel->setHasLimit(true);
+                paramIndex++;
+            } else {
+                channel->setHasLimit(false);
+                channel->setLimit(-1);
+            }
+        }
+        else if (modeChar == 'o') {
+            if (vec.size() <= paramIndex) {
+                sendMessageFromServ(fd, 461, "MODE :Not enough parameters for +o/-o");
+                return;
+            }
+            std::string nick = vec[paramIndex++];
+            Client* target = findClientByNickname(nick);
+            if (!target || !channel->hasClient(target->getFd())) {
+                sendMessageFromServ(fd, 441, nick + " " + channelName + " :They aren't on that channel");
+                return;
+            }
+            if (adding)
+                channel->makeOperator(target->getFd());
+            else
+                channel->removeOperator(target->getFd());
+        }
+        else {
+            sendMessageFromServ(fd, 472, std::string(1, modeChar) + " :is unknown mode char to me");
+            return;
+        }
+    }
+
+    // Notifier tous les membres du channel du changement de mode
+    std::vector<Client*> clients = channel->getClientList();
+    for (size_t i = 0; i < clients.size(); ++i) {
+        sendRawMessage(clients[i]->getFd(), modeChanges + "\r\n");
+    }
 }
 
 void	Server::whoisCommand(int fd, std::vector<std::string> vec)
