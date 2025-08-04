@@ -24,6 +24,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <cstring>
+#include <cstdlib>
 
 struct ParsedMessage {
     std::string user;

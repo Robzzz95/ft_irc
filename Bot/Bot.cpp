@@ -3,17 +3,17 @@
 /*                                                        :::      ::::::::   */
 /*   Bot.cpp                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/29 12:52:10 by sacha             #+#    #+#             */
-/*   Updated: 2025/08/04 13:38:36 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 15:21:18 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Bot.hpp"
 
 
-Bot::Bot(const std::string& ip, const std::string& port, const std::string& pass,
+Bot::Bot(const std::string& ip, const std::string& port, const std::string& pass, \
         const std::string& nick, const std::string& user, const std::string& realname)
 {
     _serverIp = ip;
@@ -39,7 +39,7 @@ bool Bot::connectToServer()
     struct sockaddr_in serverAddr;
     memset(&serverAddr, 0, sizeof(serverAddr));
     serverAddr.sin_family = AF_INET;
-    serverAddr.sin_port = htons(std::stoi(_serverPort));
+    serverAddr.sin_port = htons(atoi(_serverPort.c_str()));
     
     if (inet_pton(AF_INET, _serverIp.c_str(), &serverAddr.sin_addr) <= 0)
         return false;
@@ -126,7 +126,7 @@ void Bot::handleServerMessage(const std::string& msg)
         while (!trimmedMsg.empty() && isspace(trimmedMsg[0]))
             trimmedMsg.erase(0, 1);
         while (!trimmedMsg.empty() && isspace(trimmedMsg[trimmedMsg.size() - 1]))
-            trimmedMsg.pop_back();
+            trimmedMsg.erase(trimmedMsg.length() - 1, 1);
 
         if (trimmedMsg == "!help") {
             sendMessage("#bot", "📋 Guide du Bot Modérateur :");

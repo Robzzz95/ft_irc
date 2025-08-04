@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   main.cpp                                           :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 17:10:55 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 15:07:22 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,11 +42,3 @@ int	main(int ac, char **av)
 	serv.initServ();
 	return (0);
 }
-
-/*
-to do list:
-get the modes for channels
-some inputs outputs should get done properly, might have issues so far 
-add missing commands
-nick change shouldnt disconnect
-*/
