@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 15:06:53 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 15:13:58 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -659,12 +659,14 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
     if (vec.size() == 2) {
         std::string modes = "+";
         std::string params;
+		std::stringstream oss;
+		oss << channel->getLimit();
 
         if (channel->isInviteOnly()) modes += "i";
         if (channel->isTopicLocked()) modes += "t";
         if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
-        if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
-
+        // if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
+		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
         sendMessageFromServ(fd, 324, channelName + " " + modes + params);
         return;
     }

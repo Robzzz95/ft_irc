@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   utils.cpp                                          :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 17:11:09 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 15:09:37 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,3 +91,5 @@ std::vector<std::string>	splitList(const std::string &str)
 		dest.push_back(tmp);	
 	return (dest);
 }
+
+

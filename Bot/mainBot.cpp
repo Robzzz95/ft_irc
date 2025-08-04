@@ -14,13 +14,13 @@
 #include <iostream>
 #include <csignal>
 
-Bot* globalBot = nullptr;
+Bot* globalBot = NULL;
 
 void signalHandler(int signal) {
     (void)signal;
     if (globalBot) {
         delete globalBot;
-        globalBot = nullptr;
+        globalBot = NULL;
     }
     exit(0);
 }
