@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 22:27:18 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 22:44:27 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -630,7 +630,7 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 			return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
 		if (!channel_ptr->hasClient(fd))
 			return sendMessageFromServ(fd, 442, channel_name + " :You are not on that channel");
-		std::string msg = ":" + client->getPrefix() + " PART " + channel_name;
+		std::string msg = client->getPrefix() + " PART " + channel_name;
 		if (!reason.empty())
 			msg += " :" + reason;
 		msg += "\r\n";
@@ -676,7 +676,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
 
     // Si seulement le nom du channel est donné, on affiche les modes actuels
     if (vec.size() == 2) {
-        std::string modes = "+";
+        std::string modes = "";
         std::string params;
 		std::stringstream oss;
 		oss << channel->getLimit();
@@ -686,7 +686,12 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
         if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
         // if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
 		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
-        sendMessageFromServ(fd, 324, channelName + " " + modes + params);
+        
+        // Si aucun mode n'est actif, ne pas envoyer de message MODE
+        if (!modes.empty()) {
+            modes = "+" + modes;
+            sendMessageFromServ(fd, 324, channelName + " " + modes + params);
+        }
         return;
     }
 
@@ -699,7 +704,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
     std::string modeString = vec[2];
     size_t paramIndex = 3;
     bool adding = true;
-    std::string modeChanges = ":" + client->getPrefix() + " MODE " + channelName + " " + modeString;
+    std::string modeChanges = client->getPrefix() + " MODE " + channelName + " " + modeString;
 
     for (size_t i = 0; i < modeString.length(); ++i) {
         char modeChar = modeString[i];
