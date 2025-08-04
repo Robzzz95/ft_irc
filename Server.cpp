@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 16:51:49 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 17:40:12 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -524,13 +524,16 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
 	std::vector<std::string> channels = splitList(vec[1]);
-	std::string key = (vec.size() >= 3 ? vec[2] : "");
+	std::vector<std::string> keys;
+	if (vec.size() >= 3)
+		keys = splitList(vec[2]);
 
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];
+		std::string key = (i < keys.size()) ? keys[i] : "";
 		if (channel_name.empty() || channel_name[0] != '#')
-			return sendMessageFromServ(fd, 476, "Invalid channel name.");
+			return sendMessageFromServ(fd, 476, " :Bad Channel Mask");
 		Channel* new_channel;
 		if (_channels.find(channel_name) == _channels.end())
 		{
@@ -540,19 +543,26 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		else
 			new_channel = _channels[channel_name];
 
+		std::string msg;
 		if (new_channel->isInviteOnly() && !new_channel->isInvited(fd))
 		{
-			sendMessageFromServ(fd, 473, channel_name + " :Cannot join channel (+i)");
+			msg = ":" + _name + " 471 " + client->getNickname() + " " + channel_name + \
+				" :Cannot join channel (+i)\r\n";
+			sendRawMessage(fd, msg);
 			continue ;
 		}
 		if (new_channel->hasLimit() && static_cast<int>(new_channel->getClientList().size()) >= new_channel->getLimit())
     	{
-			sendMessageFromServ(fd, 471, channel_name + " :Cannot join channel (+l)");
+			msg = ":" + _name + " 471 " + client->getNickname() + " " + channel_name + \
+				" :Cannot join channel (+l)\r\n";
+			sendRawMessage(fd, msg);
 			continue ;
 		}	
         if (new_channel->hasPassword() && key != new_channel->getPassword())
 		{
-			sendMessageFromServ(fd, 475, " :Cannot join channel (+k)");
+			msg = ":" + _name + " 471 " + client->getNickname() + " " + channel_name + \
+				" :Cannot join channel (+k)\r\n";
+			sendRawMessage(fd, msg);
 			continue ;
 		}
 		_channels[channel_name]->addClient(fd, client);
@@ -647,7 +657,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
     std::string channelName = vec[1];
     Channel* channel = getChannelByName(channelName);
     if (!channel) {
-        sendMessageFromServ(fd, 403, channelName + " :No such channel");
+        // sendMessageFromServ(fd, 403, channelName + " :No such channel");
         return;
     }
 
