@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 16:38:48 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 16:48:46 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -487,7 +487,8 @@ void	Server::pingCommand(int fd, std::vector<std::string> vec)
 	Client*	client = _clients[fd];
 	std::string token = (vec.size() >= 2) ? vec[1] : _name;
 	client->setLastActivity(time(NULL));
-	sendRawMessage(fd, "PONG " + _name + " :" + token + "\r\n");
+	std::string msg = "PONG " + _name + " " + token + "\r\n";
+	sendRawMessage(fd, msg);
 }
 
 void	Server::checkClientTimeouts()
