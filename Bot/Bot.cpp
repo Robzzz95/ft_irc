@@ -6,19 +6,12 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/29 12:52:10 by sacha             #+#    #+#             */
-/*   Updated: 2025/07/30 15:40:52 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 13:38:36 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "Bot.hpp"
-#include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <cstring>
+
 
 Bot::Bot(const std::string& ip, const std::string& port, const std::string& pass,
         const std::string& nick, const std::string& user, const std::string& realname)

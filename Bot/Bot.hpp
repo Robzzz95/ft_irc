@@ -16,6 +16,14 @@
 #include <string>
 #include <set>
 #include <map>
+#include <iostream>
+#include <fstream>
+#include <algorithm>
+#include <unistd.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <cstring>
 
 struct ParsedMessage {
     std::string user;
