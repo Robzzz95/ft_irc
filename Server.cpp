@@ -6,7 +6,7 @@
 /*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 14:10:56 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/04 14:26:15 by sacha            ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -668,7 +668,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
     std::string modeString = vec[2];
     size_t paramIndex = 3;
     bool adding = true;
-    std::string modeChanges = ":" + client->getPrefix() + " MODE " + channelName + " " + modeString;
+    std::string modeChanges = client->getPrefix() + " MODE " + channelName + " " + modeString;
 
     for (size_t i = 0; i < modeString.length(); ++i) {
         char modeChar = modeString[i];
