@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 18:48:26 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 16:38:48 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -395,7 +395,7 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 	client->setRealname(realname);
 	client->setRegistered(true);
 	sendMessageFromServ(fd, 001, client->getNickname() + " :Welcome to the IRC Network " + client->getPrefix());
-	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is " + _name + " , running version v1.0");
+	sendMessageFromServ(fd, 002, client->getNickname() + " :Your host is " + _name + ", running version v1.0");
 	sendMessageFromServ(fd, 003, client->getNickname() + " :This server was created Mon Jun 10 2025 at 13:45:00");
 	sendMessageFromServ(fd, 004, _name + " v1.0 o o");
 }
@@ -620,16 +620,11 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 	}
 }
 
-
-
 void	Server::capCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 	if (vec.size() < 2)
-	{
-		//erreur pas assez d'arguments
-		return ;
-	}
+		return sendMessageFromServ(fd, 461, " CAP :Need more parameters");
 	std::string param = vec[1];
 	if ((!client->getAuthentificated() && !client->getRegistered()) && param != "END")
 	{
@@ -848,34 +843,6 @@ void	Server::whoCommand(int fd, std::vector<std::string> vec)
 		std::string endMsg = ":" + _name + " 315 " + requester->getNickname() + " " + target + " :End of WHO list\r\n";
 		return sendRawMessage(fd, endMsg);
 	}
-	
-	//all users
-	// if (target == "*")
-	// {
-	// 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it)
-	// 	{
-	// 		Client* c = it->second;
-	// 		std::string status = "H";
-	// 		std::string channelName = "*";
-	// 		for (std::map<std::string, Channel*>::iterator ch = _channels.begin(); ch != _channels.end(); ++ch)
-	// 		{
-	// 			if (ch->second->hasClient(c->getFd()))
-	// 			{
-	// 				channelName = ch->first;
-	// 				if (ch->second->isOperator(c->getFd()))
-	// 					status += "@";
-	// 				break;
-	// 			}
-	// 		}
-	// 		std::string reply = ":" + _name + " 352 " + requester->getNickname() + " " +
-	// 			channelName + " " + c->getUsername() + " " + c->getHostname() + " " +
-	// 			_name + " " + c->getNickname() + " " + status + " :0 " + c->getRealname() + "\r\n";
-	// 		sendRawMessage(fd, reply);
-	// 	}
-	// 	std::string endMsg = ":" + _name + " 315 " + requester->getNickname() + " * :End of WHO list\r\n";
-	// 	return sendRawMessage(fd, endMsg);
-	// }
-
 	//if nothing matches
 	return sendMessageFromServ(fd, 403, target + " :No such nick/channel");
 }
