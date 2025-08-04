@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 17:40:12 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/04 18:17:33 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -436,21 +436,34 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 		message.erase(0, 1);
 	if (recipient.empty() || message.empty())
 		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
-	//message to channel
+	std::string msg;
+		//message to channel
 	if (recipient[0] == '#')
 	{
 		Channel* channel = getChannelByName(recipient);
 		if (!channel)
-			return sendMessageFromServ(fd, 403, recipient + " :No such channel");
+		{
+			msg = ":" + _name + " 403 " + sender->getNickname() + " " + recipient + " :No such channel.\r\n";
+			sendRawMessage(fd, msg);
+			return ;
+		}
 		if (!channel->hasClient(fd))
-			return sendMessageFromServ(fd, 404, recipient + " :Cannot send to channel");
+		{
+			msg = ":" + _name + " 404 " + sender->getNickname() + " " + recipient + " :Cannot send to channel.\r\n";
+			sendRawMessage(fd, msg);
+			return ;
+		}
 		channel->broadcast(sender->getPrefix() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
 		return ;
 	}
 	//private message
 	Client*	target = findClientByNickname(recipient);
 	if (!target)
-		return sendMessageFromServ(fd, 401, recipient + " :No such nick.");
+	{
+		msg = ":" + _name + " 401 " + sender->getNickname() + " " + recipient + " :No such nick.\r\n";
+		sendRawMessage(fd, msg);
+		return ;
+	}
 	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
@@ -546,7 +559,7 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		std::string msg;
 		if (new_channel->isInviteOnly() && !new_channel->isInvited(fd))
 		{
-			msg = ":" + _name + " 471 " + client->getNickname() + " " + channel_name + \
+			msg = ":" + _name + " 473 " + client->getNickname() + " " + channel_name + \
 				" :Cannot join channel (+i)\r\n";
 			sendRawMessage(fd, msg);
 			continue ;
@@ -560,7 +573,7 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		}	
         if (new_channel->hasPassword() && key != new_channel->getPassword())
 		{
-			msg = ":" + _name + " 471 " + client->getNickname() + " " + channel_name + \
+			msg = ":" + _name + " 475 " + client->getNickname() + " " + channel_name + \
 				" :Cannot join channel (+k)\r\n";
 			sendRawMessage(fd, msg);
 			continue ;
@@ -582,7 +595,7 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 				if (j + 1 < clients.size())
 				names += " ";
 		}
-		std::string msg = ":" + _name + " 353 " + client->getNickname() + " = " + channel_name + " :" + names + "\r\n";
+		msg = ":" + _name + " 353 " + client->getNickname() + " = " + channel_name + " :" + names + "\r\n";
 		sendRawMessage(fd, msg);
 		msg.clear();
 		msg = ":" + _name + " 366 " + client->getNickname() + " " + channel_name + " :End of NAMES list\r\n";
