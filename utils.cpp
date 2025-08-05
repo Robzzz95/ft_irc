@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 15:09:37 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/07/30 15:10:31 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,5 +91,3 @@ std::vector<std::string>	splitList(const std::string &str)
 		dest.push_back(tmp);	
 	return (dest);
 }
-
-
