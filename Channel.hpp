@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Channel.hpp                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:39:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/29 12:42:32 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/05 15:32:40 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -48,6 +48,7 @@ public:
 	bool	isOperator(int fd) const;
 	void	makeOperator(int fd);
 	void	removeOperator(int fd);
+	std::set<int>	getOperators() const ;
 
 	bool	isInviteOnly() const;
 	void	setInviteOnly(bool value);
