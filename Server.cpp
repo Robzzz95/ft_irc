@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/05 15:36:36 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/05 16:46:08 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -415,6 +415,7 @@ void	Server::quitCommand(int fd, std::vector<std::string> vec)
 
 		if (channel->hasClient(fd))
 		{
+			bool wasOperator = channel->isOperator(fd);
 			channel->broadcast(quit_msg, fd);
 			channel->removeClient(fd);
 			if (channel->getClientList().empty())
@@ -422,6 +423,17 @@ void	Server::quitCommand(int fd, std::vector<std::string> vec)
 				delete channel;
 				_channels.erase(it++);
 				continue ;
+			}
+			if (wasOperator && channel->getOperators().empty())
+			{
+				std::vector<Client*> remainingClients = channel->getClientList();
+				if (!remainingClients.empty())
+				{
+					Client* newOp = remainingClients[0];
+					channel->makeOperator(newOp->getFd());
+					std::string op_msg = ":" + _name + " MODE " + channel->getName() + " +o " + newOp->getNickname() + "\r\n";
+					channel->broadcast(op_msg, -1);
+				}
 			}
 		}
 		it++;
@@ -874,7 +886,7 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		return sendMessageFromServ(fd, 461, "KICK :Not enough parameters");
 	std::string channel_name = vec[1];
 	std::vector<std::string> target_list = splitList(vec[2]);
-	std::string reason = "Kicked";
+	std::string reason;
 	Channel* channel = getChannelByName(channel_name);
 	if (!channel)
 		return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
@@ -884,7 +896,6 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		return sendMessageFromServ(fd, 482, channel_name + " :You're not channel operator");
 	if (vec.size() > 3)
 	{
-		reason.clear();
 		for (size_t i = 3; i < vec.size(); i++)
 		{
 			reason += vec[i];
@@ -894,6 +905,8 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		if (!reason.empty() && reason[0] == ':')
 			reason.erase(0, 1);
 	}
+	if (reason.empty())
+		reason = "kicked";
 	for (size_t i = 0; i < target_list.size(); i++)
 	{
 		Client* target = findClientByNickname(target_list[i]);
@@ -903,7 +916,8 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 			continue ;
 		}
 		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target->getNickname() + " :" + reason + "\r\n";
-		channel->broadcast(msg, target->getFd());
+		sendRawMessage(target->getFd(), msg);
+		channel->broadcast(msg, target->getFd());		
 		channel->removeClient(target->getFd());
 	}
 }
