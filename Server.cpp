@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 18:17:33 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/05 15:36:36 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -65,15 +65,14 @@ void	Server::initCommands()
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
 	_commands["MODE"] = &Server::modeCommand; //tester les modes!
-	_commands["WHOIS"] = &Server::whoisCommand; //a tesst
+	_commands["WHOIS"] = &Server::whoisCommand;
 	_commands["PART"] = &Server::partCommand;
 	_commands["KICK"] = &Server::kickCommand; //tester
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
-	_commands["WHO"] = &Server::whoCommand; //test 
+	_commands["WHO"] = &Server::whoCommand;
 	_commands["NAMES"] = &Server::namesCommand;
-	_commands["LIST"] = &Server::listCommand; //test
-	// _commands["NOTICE"] = &Server::noticeCommand;
+	_commands["LIST"] = &Server::listCommand;
 }
 
 void	Server::initServ()
@@ -85,12 +84,7 @@ void	Server::initServ()
 	{
 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
 		if (ret < 0)
-		{
-			if (errno == EINTR)
-				continue ;
-			std::cerr << "poll() failed." << std::endl;
 			break ;
-		}
 		for (size_t i = 0; i < _poll_fds.size(); i++)
 		{
 			if (_poll_fds[i].revents & POLLIN)
@@ -172,7 +166,6 @@ void	Server::acceptClient()
 	_clients[client_fd] = new Client(client_fd, ip, hostname);
 	std::cout << "Accepted new client on FD: " << client_fd << std::endl;
 	std::cout << "	New clients ip: " << ip << ", its hostname is: " << hostname << std::endl;
-	sendRawMessage(client_fd, ":ft_irc NOTICE * : Please enter your password using <PASS>\r\n"); //for netcat
 }
 
 void	Server::handleClient(int fd)
@@ -219,21 +212,21 @@ int	Server::processCommand(int fd, const std::string &line)
 {
 	std::vector<std::string> vec = splitIrc(line);
 	if (vec.empty())
-		return (0);
+		return (1);
 	std::map<std::string, commandHandler>::iterator it = _commands.find(vec[0]);
 	if (it != _commands.end())
 	{
 		commandHandler	handler = it->second;
 		(this->*handler)(fd, vec);
-		if (_clients.find(fd) == _clients.end())
-			return (1);
+		// if (_clients.find(fd) == _clients.end())
+		// 	return (1);
 	}
 	return (0);
 }
 
 void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
 {
-	Client*	client = _clients[fd];
+	Client* client = _clients[fd];
 	std::ostringstream oss;
 
 	oss << ":" << _name << " " \
@@ -314,7 +307,7 @@ void	Server::passCommand(int fd, std::vector<std::string> vec)
 
 void	Server::nickCommand(int fd, std::vector<std::string> vec)
 {
-	Client*	client = _clients[fd];
+    Client* client = _clients[fd];
 
 	if (!client->getAuthentificated())
 	{
@@ -402,6 +395,7 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 
 void	Server::quitCommand(int fd, std::vector<std::string> vec)
 {
+	Client* client = _clients[fd];
 	std::string reason = vec[1];
 	std::string message;
 	if (vec.size() > 2)
@@ -412,6 +406,25 @@ void	Server::quitCommand(int fd, std::vector<std::string> vec)
 		reason = reason.substr(i);
 		if (!reason.empty())
 			message = reason;
+	}
+
+	std::string quit_msg = ":" + client->getPrefix() + " QUIT :" + reason + "\r\n";
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); )
+	{
+		Channel* channel = it->second;
+
+		if (channel->hasClient(fd))
+		{
+			channel->broadcast(quit_msg, fd);
+			channel->removeClient(fd);
+			if (channel->getClientList().empty())
+			{
+				delete channel;
+				_channels.erase(it++);
+				continue ;
+			}
+		}
+		it++;
 	}
 	closeConnection(fd);
 }
@@ -456,7 +469,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 		channel->broadcast(sender->getPrefix() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
 		return ;
 	}
-	//private message
+	//private message 
 	Client*	target = findClientByNickname(recipient);
 	if (!target)
 	{
@@ -537,21 +550,31 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
 	std::vector<std::string> channels = splitList(vec[1]);
-	std::vector<std::string> keys;
-	if (vec.size() >= 3)
-		keys = splitList(vec[2]);
+	std::vector<std::string> keys = (vec.size() >= 3) ? splitList(vec[2]) : std::vector<std::string>();
 
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];
 		std::string key = (i < keys.size()) ? keys[i] : "";
-		if (channel_name.empty() || channel_name[0] != '#')
-			return sendMessageFromServ(fd, 476, " :Bad Channel Mask");
+		if (key == "x")
+			key = "";
+		if (!isValidChannelName(channel_name))
+		{
+			sendMessageFromServ(fd, 476, channel_name + " :Invalid channel name");
+			continue ;
+		}
 		Channel* new_channel;
+		bool is_new = false;
 		if (_channels.find(channel_name) == _channels.end())
 		{
 			new_channel = new Channel(channel_name);
 			_channels[channel_name] = new_channel;
+			if (key != "")
+			{
+				new_channel->setHasPassword(true);
+				new_channel->setPassword(key);
+				is_new = true;
+			}
 		}
 		else
 			new_channel = _channels[channel_name];
@@ -583,6 +606,8 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
 		_channels[channel_name]->broadcast(message, -1);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+		if (is_new)
+			sendRawMessage(fd, ":" + client->getPrefix() + " MODE " + channel_name + " +k " + key + "\r\n");
 
 		Channel* channel = _channels[channel_name];
 		std::string names;
@@ -630,16 +655,31 @@ void	Server::partCommand(int fd, std::vector<std::string> vec)
 			return sendMessageFromServ(fd, 403, channel_name + " :No such channel");
 		if (!channel_ptr->hasClient(fd))
 			return sendMessageFromServ(fd, 442, channel_name + " :You are not on that channel");
-		std::string msg = ":" + client->getPrefix() + " PART " + channel_name;
+		std::string msg = client->getPrefix() + " PART " + channel_name;
 		if (!reason.empty())
 			msg += " :" + reason;
 		msg += "\r\n";
 		channel_ptr->broadcast(msg, -1);
+		
+		bool wasOperator = channel_ptr->isOperator(fd);
 		channel_ptr->removeClient(fd);
 		if (channel_ptr->isEmpty())
 		{
 			delete channel_ptr;
 			_channels.erase(channel_name);
+			continue ;
+		}
+		if (wasOperator && channel_ptr->getOperators().empty())
+		{
+			std::vector<Client*> remainingClients = channel_ptr->getClientList();
+			if (!remainingClients.empty())
+			{
+				Client* newOp = remainingClients[0];
+				channel_ptr->makeOperator(newOp->getFd());
+
+				std::string op_msg = ":" + _name + " MODE " + channel_name + " +o " + newOp->getNickname() + "\r\n";
+				channel_ptr->broadcast(op_msg, -1);
+			}
 		}
 	}
 }
@@ -676,7 +716,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
 
     // Si seulement le nom du channel est donné, on affiche les modes actuels
     if (vec.size() == 2) {
-        std::string modes = "+";
+        std::string modes = "";
         std::string params;
 		std::stringstream oss;
 		oss << channel->getLimit();
@@ -684,9 +724,13 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
         if (channel->isInviteOnly()) modes += "i";
         if (channel->isTopicLocked()) modes += "t";
         if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
-        // if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
 		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
-        sendMessageFromServ(fd, 324, channelName + " " + modes + params);
+        
+        // Si aucun mode n'est actif, ne pas envoyer de message MODE
+        if (!modes.empty()) {
+            modes = "+" + modes;
+            sendMessageFromServ(fd, 324, channelName + " " + modes + params);
+        }
         return;
     }
 
@@ -699,7 +743,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
     std::string modeString = vec[2];
     size_t paramIndex = 3;
     bool adding = true;
-    std::string modeChanges = ":" + client->getPrefix() + " MODE " + channelName + " " + modeString;
+    std::string modeChanges = client->getPrefix() + " MODE " + channelName + " " + modeString;
 
     for (size_t i = 0; i < modeString.length(); ++i) {
         char modeChar = modeString[i];
@@ -859,7 +903,7 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 			continue ;
 		}
 		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target->getNickname() + " :" + reason + "\r\n";
-		channel->broadcast(msg, -1);
+		channel->broadcast(msg, target->getFd());
 		channel->removeClient(target->getFd());
 	}
 }

@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 14:25:27 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/30 15:10:31 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/05 13:25:23 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -90,4 +90,22 @@ std::vector<std::string>	splitList(const std::string &str)
 	if (!tmp.empty())
 		dest.push_back(tmp);	
 	return (dest);
+}
+
+bool	isValidChannelName(const std::string &str)
+{
+	if (str.empty())
+		return (false);
+	if (str[0] != '#')
+		return (false);
+	if (str.length() > 50)
+		return (false);
+	
+	const std::string forbidden = " ,:\a\r\n";
+	for (size_t i = 0; i < str.length(); i++)
+	{
+		if (forbidden.find(str[i]) != std::string::npos)
+			return (false);
+	}
+	return (true);
 }

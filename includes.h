@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 13:47:12 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/30 15:10:38 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/05 13:22:43 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -42,6 +42,7 @@
 #include <iomanip>
 #include <set>
 #include <csignal>
+#include <string.h>
 
 void	arguments_parser(char **av);
 void	arg_error(std::string const & str);
@@ -49,5 +50,6 @@ extern	bool	g_running;
 std::vector<std::string> splitIrc(const std::string & line);
 bool	isValidNickname(const std::string &nickname);
 std::vector<std::string>	splitList(const std::string &str);
+bool	isValidChannelName(const std::string &str);
 
 #endif

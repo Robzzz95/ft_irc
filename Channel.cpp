@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/07/30 16:30:34 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/05 15:33:05 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -85,6 +85,12 @@ void	Channel::removeOperator(int fd)
 {
 	_operators.erase(fd);
 }
+
+std::set<int>	Channel::getOperators() const 
+{
+	return (_operators);
+}
+
 
 void	Channel::broadcast(const std::string &message, int except_fd)
 {
