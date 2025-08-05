@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 22:44:27 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/05 13:37:26 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -537,21 +537,31 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "JOIN: not enough parameters.");
 	std::vector<std::string> channels = splitList(vec[1]);
-	std::vector<std::string> keys;
-	if (vec.size() >= 3)
-		keys = splitList(vec[2]);
+	std::vector<std::string> keys = (vec.size() >= 3) ? splitList(vec[2]) : std::vector<std::string>();
 
 	for (size_t i = 0; i < channels.size(); i++)
 	{
 		std::string &channel_name = channels[i];
 		std::string key = (i < keys.size()) ? keys[i] : "";
-		if (channel_name.empty() || channel_name[0] != '#')
-			return sendMessageFromServ(fd, 476, " :Bad Channel Mask");
+		if (key == "x")
+			key = "";
+		if (!isValidChannelName(channel_name))
+		{
+			sendMessageFromServ(fd, 476, channel_name + " :Invalid channel name");
+			continue ;
+		}
 		Channel* new_channel;
+		bool is_new = false;
 		if (_channels.find(channel_name) == _channels.end())
 		{
 			new_channel = new Channel(channel_name);
 			_channels[channel_name] = new_channel;
+			if (key != "")
+			{
+				new_channel->setHasPassword(true);
+				new_channel->setPassword(key);
+				is_new = true;
+			}
 		}
 		else
 			new_channel = _channels[channel_name];
@@ -583,6 +593,8 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
 		_channels[channel_name]->broadcast(message, -1);
 		sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+		if (is_new)
+			sendRawMessage(fd, ":" + client->getPrefix() + " MODE " + channel_name + " +k " + key + "\r\n");
 
 		Channel* channel = _channels[channel_name];
 		std::string names;
@@ -684,7 +696,6 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
         if (channel->isInviteOnly()) modes += "i";
         if (channel->isTopicLocked()) modes += "t";
         if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
-        // if (channel->hasLimit())     { modes += "l"; params += " " + std::to_string(channel->getLimit()); }
 		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
         
         // Si aucun mode n'est actif, ne pas envoyer de message MODE
