@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/05 16:46:08 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/12 17:00:37 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -87,14 +87,27 @@ void	Server::initServ()
 			break ;
 		for (size_t i = 0; i < _poll_fds.size(); i++)
 		{
-			if (_poll_fds[i].revents & POLLIN)
+			short revents = _poll_fds[i].revents;
+			int fd = _poll_fds[i].fd;
+
+			if (revents & (POLLHUP | POLLERR | POLLNVAL))
 			{
-				if (_poll_fds[i].fd == _socket)
+				if (fd != _socket)
+				{
+					std::cerr << "Closing fd " << fd << " due to poll error/hang-up\n";
+					closeConnection(fd);
+				}
+				continue;
+			}
+			if (revents & POLLIN)
+			{
+				if (fd == _socket)
 					acceptClient();
-				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
-					handleClient(_poll_fds[i].fd);
+				else if (_clients.find(fd) != _clients.end())
+					handleClient(fd);
 			}
 		}
+
 		time_t now = time(NULL);
 		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
 		{
@@ -103,6 +116,35 @@ void	Server::initServ()
 		}
 	}
 }
+
+// void	Server::initServ()
+// {
+// 	setupSocket();
+// 	initCommands();
+// 	time_t lastTimeoutCheck = time(NULL);
+// 	while (g_running)
+// 	{
+// 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
+// 		if (ret < 0)
+// 			break ;
+// 		for (size_t i = 0; i < _poll_fds.size(); i++)
+// 		{
+// 			if (_poll_fds[i].revents & POLLIN)
+// 			{
+// 				if (_poll_fds[i].fd == _socket)
+// 					acceptClient();
+// 				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
+// 					handleClient(_poll_fds[i].fd);
+// 			}
+// 		}
+// 		time_t now = time(NULL);
+// 		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
+// 		{
+// 			checkClientTimeouts();
+// 			lastTimeoutCheck = now;
+// 		}
+// 	}
+// }
 
 void	Server::setupSocket()
 {
@@ -408,7 +450,7 @@ void	Server::quitCommand(int fd, std::vector<std::string> vec)
 			message = reason;
 	}
 
-	std::string quit_msg = ":" + client->getPrefix() + " QUIT :" + reason + "\r\n";
+	std::string quit_msg = client->getPrefix() + " QUIT :" + reason + "\r\n";
 	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); )
 	{
 		Channel* channel = it->second;
@@ -525,7 +567,9 @@ void	Server::pingCommand(int fd, std::vector<std::string> vec)
 	Client*	client = _clients[fd];
 	std::string token = (vec.size() >= 2) ? vec[1] : _name;
 	client->setLastActivity(time(NULL));
-	std::string msg = "PONG " + _name + " " + token + "\r\n";
+	if (!token.empty() && token[0] == ':')
+		token.erase(0, 1);
+	std::string msg = "PONG " + _name + " :" + token + "\r\n";
 	sendRawMessage(fd, msg);
 }
 
@@ -614,6 +658,8 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 			continue ;
 		}
 		_channels[channel_name]->addClient(fd, client);
+		if (new_channel->isInviteOnly())
+			new_channel->removeInvited(fd);
 
 		std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
 		_channels[channel_name]->broadcast(message, -1);
@@ -735,7 +781,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
 
         if (channel->isInviteOnly()) modes += "i";
         if (channel->isTopicLocked()) modes += "t";
-        if (channel->hasPassword())  { modes += "k"; params += " " + channel->getPassword(); }
+	    if (channel->hasPassword())  { modes += "k"; params += " "; }
 		if (channel->hasLimit())     { modes += "l"; params += " " + oss.str(); }
         
         // Si aucun mode n'est actif, ne pas envoyer de message MODE
@@ -746,6 +792,13 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
         return;
     }
 
+	if (!vec[2].empty() && vec[2] == "b")
+	{
+		std::string b_list = ":" + _name + " 368 " + client->getNickname() + " " + channelName + " :End of channel ban list\r\n";
+		sendRawMessage(fd, b_list);
+		return ;
+	}
+	
     // Seul un opérateur peut changer les modes
     if (!channel->isOperator(fd)) {
         sendMessageFromServ(fd, 482, channelName + " :You're not channel operator");
@@ -807,6 +860,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
                 channel->makeOperator(target->getFd());
             else
                 channel->removeOperator(target->getFd());
+			modeChanges += " " + target->getNickname();
         }
         else {
             sendMessageFromServ(fd, 472, std::string(1, modeChar) + " :is unknown mode char to me");
@@ -905,8 +959,6 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		if (!reason.empty() && reason[0] == ':')
 			reason.erase(0, 1);
 	}
-	if (reason.empty())
-		reason = "kicked";
 	for (size_t i = 0; i < target_list.size(); i++)
 	{
 		Client* target = findClientByNickname(target_list[i]);
@@ -915,7 +967,7 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 			sendMessageFromServ(fd, 441, target_list[i] + " " + channel_name + " They aren't on that channel");
 			continue ;
 		}
-		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target->getNickname() + " :" + reason + "\r\n";
+		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target_list[i] + " :" + reason + "\r\n";
 		sendRawMessage(target->getFd(), msg);
 		channel->broadcast(msg, target->getFd());		
 		channel->removeClient(target->getFd());
