@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:33:05 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 17:12:16 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/13 16:39:33 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,6 +22,7 @@ Client::Client(int fd, const std::string &ip, const std::string &hostname)
 	_realname = "";
 	_buffer = "";
 	_authentificated = false;
+	_has_sent_nick = false;
 	_registered = false;
 	_prefix = "";
 	_last_ping = -1;
@@ -79,6 +80,11 @@ bool	Client::getAuthentificated() const
 	return (_authentificated);
 }
 
+bool	Client::getHasSentNick() const
+{
+	return (_has_sent_nick);
+}
+
 bool	Client::getRegistered() const
 {
 	return (_registered);
@@ -102,6 +108,11 @@ void	Client::setRealname(const std::string &str)
 void	Client::setAuthentificated(bool value)
 {
 	_authentificated = value;
+}
+
+void	Client::setHasSentNick(bool value)
+{
+	_has_sent_nick = value;
 }
 
 void	Client::setRegistered(bool value)

@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/12 17:00:37 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/13 16:46:29 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -61,13 +61,13 @@ void	Server::initCommands()
 	_commands["QUIT"] = &Server::quitCommand;
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
-	_commands["PONG"] = &Server::pingCommand;
+	_commands["PONG"] = &Server::pongCommand;
 	_commands["JOIN"] = &Server::joinCommand;
 	_commands["CAP"] = &Server::capCommand;
-	_commands["MODE"] = &Server::modeCommand; //tester les modes!
+	_commands["MODE"] = &Server::modeCommand;
 	_commands["WHOIS"] = &Server::whoisCommand;
 	_commands["PART"] = &Server::partCommand;
-	_commands["KICK"] = &Server::kickCommand; //tester
+	_commands["KICK"] = &Server::kickCommand;
 	_commands["INVITE"] = &Server::inviteCommand;
 	_commands["TOPIC"] = &Server::topicCommand;
 	_commands["WHO"] = &Server::whoCommand;
@@ -87,27 +87,14 @@ void	Server::initServ()
 			break ;
 		for (size_t i = 0; i < _poll_fds.size(); i++)
 		{
-			short revents = _poll_fds[i].revents;
-			int fd = _poll_fds[i].fd;
-
-			if (revents & (POLLHUP | POLLERR | POLLNVAL))
+			if (_poll_fds[i].revents & POLLIN)
 			{
-				if (fd != _socket)
-				{
-					std::cerr << "Closing fd " << fd << " due to poll error/hang-up\n";
-					closeConnection(fd);
-				}
-				continue;
-			}
-			if (revents & POLLIN)
-			{
-				if (fd == _socket)
+				if (_poll_fds[i].fd == _socket)
 					acceptClient();
-				else if (_clients.find(fd) != _clients.end())
-					handleClient(fd);
+				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
+					handleClient(_poll_fds[i].fd);
 			}
 		}
-
 		time_t now = time(NULL);
 		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
 		{
@@ -116,35 +103,6 @@ void	Server::initServ()
 		}
 	}
 }
-
-// void	Server::initServ()
-// {
-// 	setupSocket();
-// 	initCommands();
-// 	time_t lastTimeoutCheck = time(NULL);
-// 	while (g_running)
-// 	{
-// 		int ret = poll(&_poll_fds[0], _poll_fds.size(), -1);
-// 		if (ret < 0)
-// 			break ;
-// 		for (size_t i = 0; i < _poll_fds.size(); i++)
-// 		{
-// 			if (_poll_fds[i].revents & POLLIN)
-// 			{
-// 				if (_poll_fds[i].fd == _socket)
-// 					acceptClient();
-// 				else if (_clients.find(_poll_fds[i].fd) != _clients.end())
-// 					handleClient(_poll_fds[i].fd);
-// 			}
-// 		}
-// 		time_t now = time(NULL);
-// 		if (now - lastTimeoutCheck >= TIMEOUT_CHECK)
-// 		{
-// 			checkClientTimeouts();
-// 			lastTimeoutCheck = now;
-// 		}
-// 	}
-// }
 
 void	Server::setupSocket()
 {
@@ -386,6 +344,7 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 	client->setNickname(vec[1]);
 	std::string msg = ":" + old_nick + "!" + client->getUsername() + "@" + client->getHostname() \
 		+ " NICK :" + vec[1] + "\r\n";
+	client->setHasSentNick(true);
 	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
 	{
 		if (it->second->hasClient(fd))
@@ -395,12 +354,21 @@ void	Server::nickCommand(int fd, std::vector<std::string> vec)
 
 void	Server::userCommand(int fd, std::vector<std::string> vec)
 {
-	if (_clients.find(fd) == _clients.end())
-		return ;
 	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.");
+		closeConnection(fd);
+		return ;
+	}
 	if (client->getRegistered())
 	{
 		sendMessageFromServ(fd, 462, "Error: You are already registered.");
+		return ;
+	}
+	if (!client->getHasSentNick())
+	{
+		sendMessageFromServ(fd, 431, client->getPrefix() + " :No nickname given");
 		return ;
 	}
 
@@ -438,16 +406,19 @@ void	Server::userCommand(int fd, std::vector<std::string> vec)
 void	Server::quitCommand(int fd, std::vector<std::string> vec)
 {
 	Client* client = _clients[fd];
-	std::string reason = vec[1];
+	std::string reason;
 	std::string message;
-	if (vec.size() > 2)
+	if (vec.size() > 1)
 	{
+		reason = vec[1];
 		size_t i = 0;
 		while (i < reason.size() && (reason[i] == ':' || reason[i] == ' '))
 			i++;
 		reason = reason.substr(i);
 		if (!reason.empty())
 			message = reason;
+		else
+			reason = "";
 	}
 
 	std::string quit_msg = client->getPrefix() + " QUIT :" + reason + "\r\n";
@@ -689,6 +660,12 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 void	Server::partCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, " PART Need more parameters");
 	std::vector<std::string> channels = splitList(vec[1]);
@@ -760,6 +737,12 @@ void	Server::capCommand(int fd, std::vector<std::string> vec)
 void Server::modeCommand(int fd, std::vector<std::string> vec)
 {
     Client* client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
     if (vec.size() < 2) {
         sendMessageFromServ(fd, 461, "MODE :Not enough parameters");
         return;
@@ -792,6 +775,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
         return;
     }
 
+	//mode #channel b est un message automatique pour demander la liste de clients bannis
 	if (!vec[2].empty() && vec[2] == "b")
 	{
 		std::string b_list = ":" + _name + " 368 " + client->getNickname() + " " + channelName + " :End of channel ban list\r\n";
@@ -860,6 +844,7 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
                 channel->makeOperator(target->getFd());
             else
                 channel->removeOperator(target->getFd());
+			//adding a nickname to the +o/-o command for irssi right message formatting
 			modeChanges += " " + target->getNickname();
         }
         else {
@@ -878,6 +863,12 @@ void Server::modeCommand(int fd, std::vector<std::string> vec)
 void	Server::whoisCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, " PART Need more parameters");
 	std::string name = vec[1];
@@ -903,6 +894,12 @@ void	Server::topicCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
 
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "TOPIC :Not enough parameters");
 	std::string channel_name = vec[1];
@@ -936,6 +933,12 @@ void	Server::topicCommand(int fd, std::vector<std::string> vec)
 void	Server::kickCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 3)
 		return sendMessageFromServ(fd, 461, "KICK :Not enough parameters");
 	std::string channel_name = vec[1];
@@ -969,7 +972,7 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		}
 		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target_list[i] + " :" + reason + "\r\n";
 		sendRawMessage(target->getFd(), msg);
-		channel->broadcast(msg, target->getFd());		
+		channel->broadcast(msg, target->getFd());
 		channel->removeClient(target->getFd());
 	}
 }
@@ -977,6 +980,12 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2)
 		return sendMessageFromServ(fd, 461, "INVITE :Not enough parameters");
 	Client*	target = findClientByNickname(vec[1]);
@@ -1000,6 +1009,12 @@ void	Server::inviteCommand(int fd, std::vector<std::string> vec)
 void	Server::whoCommand(int fd, std::vector<std::string> vec)
 {
 	Client*	requester = _clients[fd];
+	if (!requester->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2 || vec[1].empty())
 		return sendMessageFromServ(fd, 461, "WHO :Not enough parameters");
 	std::string target = vec[1];
@@ -1054,6 +1069,12 @@ void	Server::whoCommand(int fd, std::vector<std::string> vec)
 void	Server::namesCommand(int fd, std::vector<std::string> vec)
 {
 	Client* client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	if (vec.size() < 2 || vec[1].empty())
 	{
 		for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); it++)
@@ -1102,6 +1123,12 @@ void	Server::namesCommand(int fd, std::vector<std::string> vec)
 void	Server::listCommand(int fd, std::vector<std::string> vec)
 {
 	Client* client = _clients[fd];
+	if (!client->getAuthentificated())
+	{
+		sendMessageFromServ(fd, 464, "Error: Password required.\r\n");
+		closeConnection(fd);
+		return ;
+	}
 	std::string nick = client->getNickname();
 
 	sendMessageFromServ(fd, 321, "Channel :Users Name"); // Start of list

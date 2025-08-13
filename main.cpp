@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 16:22:01 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/11 17:17:05 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/13 16:02:49 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -35,8 +35,7 @@ int	main(int ac, char **av)
 	}
 
 	std::signal(SIGINT, signalHandler);
-	
-	signal(SIGPIPE, SIG_IGN);// temp fix to handle broken pipe thingy
+	signal(SIGPIPE, SIG_IGN);
 	
 	arguments_parser(av);
 	Server	serv(atoi(av[1]), av[2]);

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Client.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:53:32 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/03 17:12:33 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/13 16:38:33 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,7 @@ private:
 	std::string	_buffer;
 	
 	bool	_authentificated;
+	bool	_has_sent_nick;
 	bool	_registered;
 	
 	std::string _prefix;
@@ -51,12 +52,14 @@ public:
 	std::string	getPrefix() const;
 	std::string & getBufferMutable();
 	bool	getAuthentificated() const;
+	bool	getHasSentNick() const;
 	bool	getRegistered() const;
 
 	void	setNickname(const std::string &str);
 	void	setUsername(const std::string &str);
 	void	setRealname(const std::string &str);
 	void	setAuthentificated(bool value);
+	void	setHasSentNick(bool value);
 	void	setRegistered(bool value);
 
 	void	appendToBuffer(const std::string &str);
