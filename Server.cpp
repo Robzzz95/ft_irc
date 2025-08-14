@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.cpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
+/*   By: aneumann <aneumann@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/13 16:46:29 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/14 14:00:48 by aneumann         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,6 +73,7 @@ void	Server::initCommands()
 	_commands["WHO"] = &Server::whoCommand;
 	_commands["NAMES"] = &Server::namesCommand;
 	_commands["LIST"] = &Server::listCommand;
+	//_commands["DCC"] = &Server::dccCommand; // Placeholder for DCC command, not implemented yet
 }
 
 void	Server::initServ()
@@ -1164,3 +1165,44 @@ void	Server::listCommand(int fd, std::vector<std::string> vec)
 	}
 	sendMessageFromServ(fd, 323, ":End of LIST");
 }
+
+// void Server::dccCommand(int fd, std::vector<std::string> vec) {
+//     if (vec.size() < 3) { //ou 4 selon le sous-commande checker
+//         sendRawMessage(fd, "461 DCC :Not enough parameters\r\n");
+//         return;
+//     }
+
+//     Client* sender = _clients[fd];
+//     if (!sender) return;
+
+//     std::string subCommand = vec[1]; // SEND ou GET
+//     std::string targetNick = vec[2];
+
+//     Client* target = findClientByNickname(targetNick);
+//     if (!target) {
+//         sendRawMessage(fd, "401 " + targetNick + " :No such nick\r\n");
+//         return;
+//     }
+
+//     if (subCommand == "SEND") {
+//         if (vec.size() < 4) {
+//             sendRawMessage(fd, "461 DCC SEND :Not enough parameters\r\n");
+//             return;
+//         }
+//         std::string filename = vec[3];
+
+// 		//a modifier
+//         std::string ip = "127.0.0.1"; 
+//         std::string port = "5000";  
+//         std::string filesize = "0"; 
+
+//         std::string ctcp = "\x01DCC SEND " + filename + " " + ip + " " + port + " " + filesize + "\x01\r\n";
+//         sendRawMessage(target->getFd(), "PRIVMSG " + targetNick + " :" + ctcp);
+//     }
+//     else if (subCommand == "GET") {
+//         sendRawMessage(fd, "NOTICE " + sender->getNickname() + " :DCC GET command not fully implemented\r\n");
+//     }
+//     else {
+//         sendRawMessage(fd, "421 DCC " + subCommand + " :Unknown DCC subcommand\r\n");
+//     }
+// }

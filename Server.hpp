@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: aneumann <aneumann@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 12:28:24 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/14 14:01:00 by aneumann         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,8 @@ public:
 	void	whoCommand(int fd, std::vector<std::string> vec);
 	void	namesCommand(int fd, std::vector<std::string> vec);
 	void	listCommand(int fd, std::vector<std::string> vec);
-
+	
+	// void	dccCommand(int fd, std::vector<std::string> vec);
 };
 
 
