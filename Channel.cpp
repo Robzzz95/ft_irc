@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/17 15:51:51 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/05 15:33:05 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/16 10:52:26 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -94,11 +94,24 @@ std::set<int>	Channel::getOperators() const
 
 void	Channel::broadcast(const std::string &message, int except_fd)
 {
+	const size_t IRC_MAX = 510;
+
 	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); it++)
 	{
 		if (it->first == except_fd)
 			continue ;
-		send(it->first, message.c_str(), message.size(), 0);
+		size_t start = 0;
+		while (start < message.size())
+		{
+			size_t len = std::min(IRC_MAX, message.size() - start);
+			std::string chunk = message.substr(start, len);
+			if (chunk.size() >= IRC_MAX)
+				chunk = chunk.substr(0, IRC_MAX - 2) + "\r\n";
+			else if (chunk.find("\r\n") == std::string::npos)
+				chunk += "\r\n";
+			send(it->first, chunk.c_str(), chunk.size(), 0);
+			start += len;
+		}
 	}
 }
 

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   Server.hpp                                         :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: sacha <sacha@student.42.fr>                +#+  +:+       +#+        */
+/*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/04 12:28:24 by sacha            ###   ########.fr       */
+/*   Updated: 2025/08/16 10:38:03 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,7 +73,7 @@ public:
 	void	whoCommand(int fd, std::vector<std::string> vec);
 	void	namesCommand(int fd, std::vector<std::string> vec);
 	void	listCommand(int fd, std::vector<std::string> vec);
-
+	
 };
 
 

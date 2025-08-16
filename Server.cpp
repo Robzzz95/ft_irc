@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/13 18:02:05 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/16 10:58:44 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -224,27 +224,57 @@ int	Server::processCommand(int fd, const std::string &line)
 	return (0);
 }
 
-void	Server::sendMessageFromServ(int fd, int code, const std::string &message)
+void Server::sendMessageFromServ(int fd, int code, const std::string &message)
 {
 	Client* client = _clients[fd];
 	std::ostringstream oss;
 
 	oss << ":" << _name << " " \
 		<< std::setw(3) << std::setfill('0') << code << " " \
-		<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :" \
-		<< message << "\r\n";
+		<< (client->getNickname().empty() ? "*" : client->getNickname()) << " :";
 
-	std::string str = oss.str();
-	ssize_t sent = send(fd, str.c_str(), str.length(), 0);
-	if (sent < 0)
-		std::cerr << "Error : failed to send message to FD: " << fd << std::endl;
+	std::string header = oss.str();
+	const size_t IRC_MAX = 510;
+	size_t maxMsgLen = IRC_MAX - header.size();
+    std::string remaining = message;
+
+	while (!remaining.empty())
+	{
+		std::string chunk = remaining.substr(0, maxMsgLen);
+		remaining.erase(0, chunk.size());
+		std::string full = header + chunk + "\r\n";
+		ssize_t sent = send(fd, full.c_str(), full.size(), 0);
+		if (sent < 0)
+		{
+			std::cerr << "Error: failed to send numeric reply to FD: " \
+				<< fd << std::endl;
+			break;
+		}
+	}
 }
 
 void	Server::sendRawMessage(int fd, const std::string &message)
 {
-	ssize_t sent = send(fd, message.c_str(), message.length(), 0);
-	if (sent < 0)
-		std::cerr << "Error: failed to send raw message." << std::endl;
+	const size_t IRC_MAX = 510;
+	size_t start = 0;
+
+	while (start < message.size())
+	{
+		size_t len = std::min(IRC_MAX, message.size() - start);
+		std::string chunk = message.substr(start, len);
+		if (chunk.size() >= IRC_MAX)
+			chunk = chunk.substr(0, IRC_MAX - 2) + "\r\n";
+		else if (chunk.find("\r\n") == std::string::npos)
+			chunk += "\r\n";
+
+		ssize_t sent = send(fd, chunk.c_str(), chunk.size(), 0);
+		if (sent < 0)
+		{
+			std::cerr << "Error: failed to send raw message." << std::endl;
+			break;
+		}
+		start += len;
+	}
 }
 
 void	Server::removeClientFromAllChannels(int fd)
