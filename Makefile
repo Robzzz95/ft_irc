@@ -3,10 +3,10 @@
 #                                                         :::      ::::::::    #
 #    Makefile                                           :+:      :+:    :+:    #
 #                                                     +:+ +:+         +:+      #
-#    By: sacha <sacha@student.42.fr>                +#+  +:+       +#+         #
+#    By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/06/11 16:21:43 by roarslan          #+#    #+#              #
-#    Updated: 2025/08/04 22:24:46 by sacha            ###   ########.fr        #
+#    Updated: 2025/08/16 13:37:36 by roarslan         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -25,8 +25,9 @@ SRC = main.cpp \
 BOT_SRC = Bot/mainBot.cpp \
 	Bot/Bot.cpp
 
-OBJ = $(SRC:.cpp=.o)
-BOT_OBJ = $(BOT_SRC:.cpp=.o)
+OBJDIR = ./obj/
+OBJ = $(SRC:%.cpp=$(OBJDIR)%.o)
+BOT_OBJ = $(BOT_SRC:%.cpp=$(OBJDIR)%.o)
 
 all: $(NAME) $(BOT_NAME)
 
@@ -36,7 +37,8 @@ $(NAME): $(OBJ)
 $(BOT_NAME): $(BOT_OBJ)
 	$(CPP) $(BOT_OBJ) $(CPPFLAGS) -o $(BOT_NAME)
 
-%.o: %.cpp
+$(OBJDIR)%.o: %.cpp
+	@mkdir -p $(dir $@)
 	$(CPP) $(CPPFLAGS) -c $< -o $@
 
 clean:

@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/12 17:29:00 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/16 10:58:44 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/16 13:29:23 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,7 @@ void	Server::initCommands()
 	_commands["NICK"] = &Server::nickCommand;
 	_commands["USER"] = &Server::userCommand;
 	_commands["PRIVMSG"] = &Server::privmsgCommand;
+	_commands["NOTICE"] = &Server::noticeCommand;
 	_commands["QUIT"] = &Server::quitCommand;
 	_commands["EXIT"] = &Server::quitCommand;
 	_commands["PING"] = &Server::pingCommand;
@@ -505,7 +506,7 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 	if (recipient.empty() || message.empty())
 		return sendMessageFromServ(fd, 461, "PRIVMSG: not enough parameters.");
 	std::string msg;
-		//message to channel
+	//message to channel
 	if (recipient[0] == '#')
 	{
 		Channel* channel = getChannelByName(recipient);
@@ -532,6 +533,46 @@ void	Server::privmsgCommand(int fd, std::vector<std::string> vec)
 		sendRawMessage(fd, msg);
 		return ;
 	}
+	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
+	sendRawMessage(target->getFd(), full_message);
+}
+
+void	Server::noticeCommand(int fd, std::vector<std::string> vec)
+{
+	Client*	sender = _clients[fd];
+	if (!sender->getRegistered())
+		return ;
+	if (vec.size() < 2)
+		return;
+	
+	std::string	recipient, message;
+	recipient = vec[1];
+	for (size_t i = 2; i < vec.size(); i++)
+	{
+		message += vec[i];
+		if (i + 1 < vec.size())
+			message += ' ';	
+	}
+	if (!message.empty() && message[0] == ':')
+		message.erase(0, 1);
+	if (recipient.empty() || message.empty())
+		return ;
+	std::string msg;
+	//message to channel
+	if (recipient[0] == '#')
+	{
+		Channel* channel = getChannelByName(recipient);
+		if (!channel)
+			return ;
+		if (!channel->hasClient(fd))
+			return ;
+		channel->broadcast(sender->getPrefix() + " PRIVMSG " + recipient + " :" + message + "\r\n", sender->getFd());
+		return ;
+	}
+	//private message 
+	Client*	target = findClientByNickname(recipient);
+	if (!target)
+		return ;
 	std::string full_message = sender->getPrefix() + " PRIVMSG " +  recipient + " :" + message + "\r\n";
 	sendRawMessage(target->getFd(), full_message);
 }
@@ -635,7 +676,21 @@ void Server::joinCommand(int fd, std::vector<std::string> vec)
 		}
 		else
 			new_channel = _channels[channel_name];
-
+			
+		if (client->getRealname() == "Moderation Service")
+		{
+			new_channel->addClient(fd, client);
+			std::string message = ":" + client->getNickname() + "!" + client->getUsername() + "@" + client->getHostname() + " JOIN " + channel_name + "\r\n";
+			_channels[channel_name]->broadcast(message, -1);
+			new_channel->makeOperator(fd);
+			std::string op_msg = ":" + _name + " MODE " + \
+						new_channel->getName() + " +o " +
+						client->getNickname() + "\r\n";
+			new_channel->broadcast(op_msg, -1);
+			sendRawMessage(fd, ":ft_irc 331 " + client->getNickname() + " " + channel_name + " :no topic is set.\r\n");
+			return ;
+		}
+		
 		std::string msg;
 		if (new_channel->isInviteOnly() && !new_channel->isInvited(fd))
 		{
@@ -998,6 +1053,11 @@ void	Server::kickCommand(int fd, std::vector<std::string> vec)
 		if (!target || !channel->hasClient(target->getFd()))
 		{
 			sendMessageFromServ(fd, 441, target_list[i] + " " + channel_name + " They aren't on that channel");
+			continue ;
+		}
+		if (target->getRealname() == "Moderation Service")
+		{
+			sendRawMessage(fd, ":" + _name + " NOTICE " + client->getNickname() + " :You cannot kick the moderator bot\r\n");
 			continue ;
 		}
 		std::string msg = client->getPrefix() + " KICK " + channel_name + " " + target_list[i] + " :" + reason + "\r\n";

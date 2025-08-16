@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/06/11 17:52:35 by roarslan          #+#    #+#             */
-/*   Updated: 2025/08/16 10:38:03 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/16 11:38:14 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -58,6 +58,7 @@ public:
 	void	userCommand(int fd, std::vector<std::string> vec);
 	void	quitCommand(int fd, std::vector<std::string> vec);
 	void	privmsgCommand(int fd, std::vector<std::string> vec);
+	void	noticeCommand(int fd, std::vector<std::string> vec);
 	Client*		findClientByNickname(const std::string &nickname);
 	Channel*	getChannelByName(const std::string &str);
 	void	pingCommand(int fd, std::vector<std::string> vec);

@@ -18,6 +18,8 @@ Bot* globalBot = NULL;
 
 void signalHandler(int signal) {
     (void)signal;
+	std::string partMsg = "PART #bot\r\n";
+	send(globalBot->getSocketFd(), partMsg.c_str(), partMsg.length(), 0);
     if (globalBot) {
         delete globalBot;
         globalBot = NULL;
@@ -36,7 +38,7 @@ int main(int argc, char** argv) {
 
     try {
         // Créer le bot avec les paramètres reçus et des valeurs par défaut pour user et realname
-        Bot* bot = new Bot(argv[1], argv[2], argv[3], argv[4], argv[4], "Bot Modérateur");
+        Bot* bot = new Bot(argv[1], argv[2], argv[3], argv[4], argv[4], "Moderation Service");
         globalBot = bot;
 
         if (!bot->connectToServer()) {

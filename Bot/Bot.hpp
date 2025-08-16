@@ -59,6 +59,10 @@ public:
     void loadBadWords(const std::string& filename);
     void handleServerMessage(const std::string& msg);
     void listenToServer();
+	std::string const & getNickname() const;
+	std::string const & getUsername() const;
+	std::string const & getHostname() const;
+	int	getSocketFd() const;
 };
 
 #endif

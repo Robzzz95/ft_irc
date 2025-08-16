@@ -6,7 +6,7 @@
 /*   By: roarslan <roarslan@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/07/29 12:52:10 by sacha             #+#    #+#             */
-/*   Updated: 2025/08/04 15:21:18 by roarslan         ###   ########.fr       */
+/*   Updated: 2025/08/16 12:21:39 by roarslan         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -100,10 +100,10 @@ ParsedMessage Bot::parseIrcMessage(const std::string& raw)
         }
     }
 
-    if (!msg.empty() && msg[0] == ':')
-        result.message = msg.substr(1);
-    else if (!msg.empty())
-        result.message = msg;
+	if (!msg.empty() && msg[0] == ':')
+		result.message = msg.substr(1);
+	else if (!msg.empty())
+		result.message = msg;
 
     return result;
 }
@@ -118,6 +118,13 @@ void Bot::handleServerMessage(const std::string& msg)
         send(_socketFd, joinCmd.c_str(), joinCmd.length(), 0);
         sendMessage("#bot", "👮 Bot modérateur actif. Tapez !help pour voir les commandes disponibles.");
     }
+
+	if (pm.command == "PING")
+	{
+		std::string msg = pm.command + " " + pm.message;
+		send(_socketFd, msg.c_str(), msg.length(), 0);
+		return ;
+	}
 
     // Commande !help
     if (pm.command == "PRIVMSG" && pm.channel == "#bot") {
@@ -182,4 +189,24 @@ void Bot::listenToServer()
         buffer[bytesRead] = '\0';
         handleServerMessage(buffer);
     }
+}
+
+std::string const & Bot::getNickname() const
+{
+	return (_nickname);
+}
+
+std::string const & Bot::getUsername() const
+{
+	return (_username);
+}
+
+std::string const & Bot::getHostname() const
+{
+	return (_serverIp);
+}
+
+int	Bot::getSocketFd() const
+{
+	return (_socketFd);
 }
